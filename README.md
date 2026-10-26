@@ -117,6 +117,28 @@ The suite also verifies round-trips (race -> VDOT -> predicted time, within
 0.1%), solver convergence across VDOT 25-85 at all 10 distances, and the
 input parsers.
 
+## Browser widget
+
+`web/` holds a dependency-free, client-side port of the solver for dropping
+into a web page: `vdot.js` (the math, parsers, formatters and self-test; no
+DOM) and `widget.js` (the form and results), with `index.html` as a host page
+that already carries the required attribution and caveat text.
+
+- Try it: `python -m http.server --directory web 8000`, then open
+  http://localhost:8000/.
+- Test it: `node web/vdot.js --self-test` mirrors the Python self-test, and
+  `node web/vdot.js --dist 5k --time 22:30` prints the same text as the Python
+  CLI, so the two can be diffed (CI does exactly that).
+- Embed it: give a page a `<div id="pace-widget"></div>`, then load `vdot.js`
+  and `widget.js` in that order. Keep the two disclaimer paragraphs and the
+  repo link from `index.html` next to it.
+- Nothing the visitor types leaves the page: no storage, no network use.
+
+The widget adds two presentation rules the CLI does not have: an equivalent
+time more than three columns from the input race (in the table order above)
+is flagged as an extrapolation, and a custom distance is flagged relative to
+its nearest named distance. Live example: https://track.collumus.com/paces/
+
 ## Method
 
 Velocity v in meters/minute, time t in minutes:
