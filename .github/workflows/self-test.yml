@@ -14,3 +14,26 @@ jobs:
           python-version: '3.12'
       - name: Run self-test
         run: python vo2_pace_solver.py --self-test
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run the browser port's self-test
+        run: node web/vdot.js --self-test
+      - name: Cross-check the browser port against the Python CLI
+        run: |
+          set -e
+          cases=(
+            "--dist 5k --time 22:30"
+            "--dist 10mi --time 1:10:00"
+            "--dist 1609.344 --time 4:55"
+            "--dist 21.1k --time 1:45:00"
+            "--dist 100000 --time 12:00:00"
+            "--vdot 53.5"
+            "--vdot 27"
+            "--vdot 85"
+            "--vdot 25"
+          )
+          for args in "${cases[@]}"; do
+            diff --strip-trailing-cr <(python vo2_pace_solver.py $args) <(node web/vdot.js $args) || { echo "MISMATCH: $args"; exit 1; }
+            echo "same: $args"
+          done
