@@ -51,8 +51,11 @@
     const select = el("select", { id: "pw-dist" });
     NAMED.forEach(([value, label], i) => select.appendChild(el("option", { value: value, text: label, "data-column": String(i) })));
     select.appendChild(el("option", { value: "custom", text: "Custom..." }));
-    const custom = el("input", { id: "pw-custom", type: "text", inputmode: "decimal", placeholder: "8k, 4mi, 5000", spellcheck: "false" });
-    const time = el("input", { id: "pw-time", type: "text", inputmode: "numeric", placeholder: "H:MM:SS or MM:SS", spellcheck: "false" });
+    // No inputmode on these two: iOS's numeric/decimal keypads have no colon and no
+    // letters, so "6:30" and "8k" could not be typed on a phone. Bare digits are also
+    // accepted for the time (630 = 6:30, 2230 = 22:30, 11000 = 1:10:00), see normalizeTime.
+    const custom = el("input", { id: "pw-custom", type: "text", placeholder: "8k, 4mi, 5000", spellcheck: "false", autocapitalize: "off" });
+    const time = el("input", { id: "pw-time", type: "text", placeholder: "6:30, 22:30 or 1:45:00 (or 630)", spellcheck: "false", autocapitalize: "off" });
     const vdotIn = el("input", { id: "pw-vdot-in", type: "text", inputmode: "decimal", placeholder: "25 to 85, e.g. 53.5", spellcheck: "false" });
 
     const raceGrid = el("div", { class: "pw-grid", id: "pw-race" }, [
@@ -172,6 +175,16 @@
     return { meters: V.parseDist(choice), column: Number(option.getAttribute("data-column")), label: option.textContent };
   }
 
+  // Widget-only convenience (the CLI's parseTime is unchanged): a run of 3-6 bare ASCII
+  // digits is read as MMSS / HMMSS / HHMMSS, since a phone keypad may offer no colon.
+  // One or two digits, or anything with punctuation, pass through to parseTime as is.
+  function normalizeTime(raw) {
+    const s = V.pyStrip(raw);
+    if (!/^[0-9]{3,6}$/.test(s)) return raw;
+    const ss = s.slice(-2), mm = s.slice(-4, -2), hh = s.slice(0, -4);
+    return (hh ? hh + ":" : "") + mm + ":" + ss;
+  }
+
   function readVdot(ui) {
     const raw = ui.vdotIn.value;
     if (!V.isAscii(raw)) throw new V.ValueError("VDOT must use ASCII digits, got " + V.pyAscii(raw));
@@ -274,8 +287,8 @@
       return;
     }
     const race = readRace(ui);
-    if (V.pyStrip(ui.time.value) === "") throw new V.ValueError("Enter the race time as H:MM:SS or MM:SS.");
-    const tMin = V.parseTime(ui.time.value);
+    if (V.pyStrip(ui.time.value) === "") throw new V.ValueError("Enter the race time as H:MM:SS or MM:SS (or bare digits such as 630 for 6:30).");
+    const tMin = V.parseTime(normalizeTime(ui.time.value));
     const vdot = V.vdotFromRace(race.meters, tMin);
     V.checkRenderable(vdot);
     race.tMin = tMin;
