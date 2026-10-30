@@ -86,8 +86,12 @@
     form.appendChild(mode);
     form.appendChild(raceGrid);
     form.appendChild(vdotGrid);
-    form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
-    form.appendChild(youthGrid);
+    // A stale cached vdot.js without the youth API would leave the age list empty; hide
+    // the toggle instead of offering a form that cannot compute.
+    if (typeof V.youthLevel === "function" && Number.isInteger(V.YOUTH_AGE_MIN)) {
+      form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
+      form.appendChild(youthGrid);
+    }
     form.appendChild(actions);
     root.appendChild(form);
     root.appendChild(el("div", { id: "pw-results", "aria-live": "polite" }));
