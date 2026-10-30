@@ -17,10 +17,16 @@
     V.pyFixed(V.E_PACE_MIN_VDOT, 0);
   const PREDICTION_EXTRAPOLATION_LABEL = "extrapolation (assumes training at that distance)";
   const VDOT_MODE_NOTE = "No reference race " + EM_DASH + " every prediction assumes training at that distance.";
-  // Youth mode lists equivalent times through 5k only (index into NAMED); Daniels' youth
-  // table is built on 1,600 m and nothing in the book rates a child at road distances.
-  const YOUTH_LAST_COLUMN = 4;
-  const YOUTH_PREDICTION_NOTE = "Youth mode stops at 5k: Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
+  // Youth mode lists the distances school runners actually race: 1,500/1,600/mile and
+  // 2k-2 miles in middle school, 5k in high school. Nothing longer: Daniels' youth table
+  // is built on 1,600 m and the book rates no child at road distances. Each row carries
+  // the column of its nearest named distance for the extrapolation flag.
+  const YOUTH_DISTANCES = [
+    ["1500 m", 1500.0], ["1600 m", 1600.0], ["Mile", V.MILE_M], ["2000 m", 2000.0],
+    ["3000 m", 3000.0], ["2 miles", 2 * V.MILE_M], ["5k", 5000.0]
+  ];
+  const YOUTH_PREDICTION_NOTE = "Youth mode lists school race distances only (2k through 2 miles in middle school, 5k in high school): " +
+    "Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
 
   function el(tag, attrs, children) {
     const node = document.createElement(tag);
@@ -237,11 +243,16 @@
     ])]));
     const ebody = el("tbody");
     const column = race ? race.column : null;
-    for (const p of V.predictions(vdot, column)) {
-      if (youth && p.column > YOUTH_LAST_COLUMN) continue;
+    const rows = youth
+      ? YOUTH_DISTANCES.map(([label, d]) => ({
+          label: label, text: V.fmtRace(V.timeFor(d, vdot)),
+          extrapolated: column === null ? false : V.isExtrapolated(column, V.nearestColumn(d))
+        }))
+      : V.predictions(vdot, column).map(p => ({ label: NAMED[p.column][1], text: p.text, extrapolated: p.extrapolated }));
+    for (const p of rows) {
       const time = el("td", { class: "num" }, [el("span", { text: p.text })]);
       if (p.extrapolated) time.appendChild(el("span", { class: "flag", text: PREDICTION_EXTRAPOLATION_LABEL }));
-      ebody.appendChild(el("tr", { class: p.extrapolated ? "extrap" : "" }, [el("td", { text: NAMED[p.column][1] }), time]));
+      ebody.appendChild(el("tr", { class: p.extrapolated ? "extrap" : "" }, [el("td", { text: p.label }), time]));
     }
     etable.appendChild(ebody);
     eq.appendChild(etable);

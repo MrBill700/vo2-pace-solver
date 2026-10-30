@@ -154,7 +154,8 @@ woman at 5:26 or man at 4:55).
 Three things it deliberately does not do: it never extrapolates above the top
 level the book prints for an age (Daniels stops the younger rows early "to
 avoid encouraging very young runners to work too hard"); it lists equivalent
-times only through 5k, since the youth table is built on 1,600 m; and it adds
+times only at school race distances (1,500 m, 1,600 m, mile, 2,000 m, 3,000 m,
+2 miles, 5k), nothing longer, since the youth table is built on 1,600 m; and it adds
 no youth-specific training paces, because the book has none. The E/M/T/I/R
 rows shown in youth mode are the adult bands applied to the child's race,
 with Daniels & Gilbert's caveat that a child's computed value underestimates
