@@ -51,11 +51,12 @@
     const select = el("select", { id: "pw-dist" });
     NAMED.forEach(([value, label], i) => select.appendChild(el("option", { value: value, text: label, "data-column": String(i) })));
     select.appendChild(el("option", { value: "custom", text: "Custom..." }));
-    // No inputmode on these two: iOS's numeric/decimal keypads have no colon and no
-    // letters, so "6:30" and "8k" could not be typed on a phone. Bare digits are also
-    // accepted for the time (630 = 6:30, 2230 = 22:30, 11000 = 1:10:00), see normalizeTime.
+    // Custom distance: no inputmode, since iOS's decimal keypad has no letters for "8k".
+    // Time: the numeric keypad on purpose (phones open straight to digits); it has no
+    // colon, so bare digits are read as MMSS / HMMSS (630 = 6:30, 11000 = 1:10:00), see
+    // normalizeTime. A typed colon still works on any keyboard that has one.
     const custom = el("input", { id: "pw-custom", type: "text", placeholder: "8k, 4mi, 5000", spellcheck: "false", autocapitalize: "off" });
-    const time = el("input", { id: "pw-time", type: "text", placeholder: "6:30, 22:30 or 1:45:00 (or 630)", spellcheck: "false", autocapitalize: "off" });
+    const time = el("input", { id: "pw-time", type: "text", inputmode: "numeric", placeholder: "630 for 6:30, 2230, 14500", spellcheck: "false", autocapitalize: "off" });
     const vdotIn = el("input", { id: "pw-vdot-in", type: "text", inputmode: "decimal", placeholder: "25 to 85, e.g. 53.5", spellcheck: "false" });
 
     const raceGrid = el("div", { class: "pw-grid", id: "pw-race" }, [
