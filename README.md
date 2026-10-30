@@ -121,7 +121,7 @@ input parsers.
 
 `web/` holds a dependency-free, client-side port of the solver for dropping
 into a web page: `vdot.js` (the math, parsers, formatters and self-test; no
-DOM) and `widget.js` (the form and results), with `index.html` as a host page
+DOM) and `widget.js` (the form and results, including a treadmill-mph column), with `index.html` as a host page
 that already carries the required attribution and caveat text.
 
 - Try it: `python -m http.server --directory web 8000`, then open

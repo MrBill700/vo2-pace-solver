@@ -106,6 +106,15 @@
     return el("td", { class: "num", text: V.isPointValue(pair) ? a : a + "-" + b });
   }
 
+  // Treadmill belt speed in mph from seconds per mile; one decimal, the usual belt
+  // increment. Presentation only: the per-mile value is still the source.
+  function fmtMph(secsPerMile) { return V.pyFixed(3600.0 / secsPerMile, 1); }
+
+  function mphCell(miPair) {
+    const a = fmtMph(miPair[0]), b = fmtMph(miPair[1]);
+    return el("td", { class: "num", text: V.isPointValue(miPair) || a === b ? a : a + "-" + b });
+  }
+
   function renderResults(vdot, race) {
     const results = document.getElementById("pw-results");
     results.textContent = "";
@@ -125,12 +134,12 @@
     paces.appendChild(el("h2", { text: "Training paces" }));
     const ptable = el("table");
     ptable.appendChild(el("thead", null, [el("tr", null, [
-      el("th", { text: "Band" }), el("th", { text: "per mile" }), el("th", { text: "per km" })
+      el("th", { text: "Band" }), el("th", { text: "per mile" }), el("th", { text: "per km" }), el("th", { text: "mph" })
     ])]));
     const pbody = el("tbody");
     for (const [label, mi, km] of V.trainingPaces(vdot)) {
-      pbody.appendChild(el("tr", { class: "band" }, [el("td", { text: label }), paceCell(mi), paceCell(km)]));
-      const note = el("td", { colspan: "3" });
+      pbody.appendChild(el("tr", { class: "band" }, [el("td", { text: label }), paceCell(mi), paceCell(km), mphCell(mi)]));
+      const note = el("td", { colspan: "4" });
       if (label.startsWith("E") && V.eRowExtrapolated(vdot)) {
         note.appendChild(el("span", { class: "flag", text: E_EXTRAPOLATION_LABEL }));
       }
@@ -139,7 +148,7 @@
     }
     ptable.appendChild(pbody);
     paces.appendChild(ptable);
-    paces.appendChild(el("p", { class: "pw-foot", text: "Ranges run slow to fast. %VO2max bands per Daniels' Running Formula, 4th ed., ch. 4; R has no published %VO2max and is derived as 6 s/400 m faster than I." }));
+    paces.appendChild(el("p", { class: "pw-foot", text: "Ranges run slow to fast. mph is treadmill belt speed at 0% grade (Daniels, ch. 7: each 1% of grade is worth roughly 10-15 s/mi). %VO2max bands per Daniels' Running Formula, 4th ed., ch. 4; R has no published %VO2max and is derived as 6 s/400 m faster than I." }));
     results.appendChild(paces);
 
     // Equivalent race times
