@@ -139,6 +139,28 @@ time more than three columns from the input race (in the table order above)
 is flagged as an extrapolation, and a custom distance is flagged relative to
 its nearest named distance. Live example: https://track.collumus.com/paces/
 
+### Youth mode (widget only)
+
+A toggle on the form age-grades the result for a runner aged 6-17 against
+Daniels' Running Formula 4th ed. Table 5.5, "VDOT Levels for Male and Female
+Runners Aged 6-18 for 1,600-Meter Times": the ten performance levels (Novice
+1-2, Intermediate 3-5, Good 6-8, Elite 9-10), the adult (18-38) VDOT at the
+same level, and the next published level's 1,600 m time. Built for planning
+middle-school practice sessions. The table is transcribed into `vdot.js`
+(`YOUTH_LEVELS`) and checked in the self-test, including Daniels' own worked
+example (a 10-year-old girl at 7:18 is level 6, the same level as an adult
+woman at 5:26 or man at 4:55).
+
+Three things it deliberately does not do: it never extrapolates above the top
+level the book prints for an age (Daniels stops the younger rows early "to
+avoid encouraging very young runners to work too hard"); it lists equivalent
+times only through 5k, since the youth table is built on 1,600 m; and it adds
+no youth-specific training paces, because the book has none. The E/M/T/I/R
+rows shown in youth mode are the adult bands applied to the child's race,
+with Daniels & Gilbert's caveat that a child's computed value underestimates
+true VO2max. The Python CLI has no youth mode, so the CI text diff is
+unaffected.
+
 ## Method
 
 Velocity v in meters/minute, time t in minutes:

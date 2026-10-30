@@ -17,6 +17,10 @@
     V.pyFixed(V.E_PACE_MIN_VDOT, 0);
   const PREDICTION_EXTRAPOLATION_LABEL = "extrapolation (assumes training at that distance)";
   const VDOT_MODE_NOTE = "No reference race " + EM_DASH + " every prediction assumes training at that distance.";
+  // Youth mode lists equivalent times through 5k only (index into NAMED); Daniels' youth
+  // table is built on 1,600 m and nothing in the book rates a child at road distances.
+  const YOUTH_LAST_COLUMN = 4;
+  const YOUTH_PREDICTION_NOTE = "Youth mode stops at 5k: Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
 
   function el(tag, attrs, children) {
     const node = document.createElement(tag);
@@ -53,6 +57,22 @@
     const vdotGrid = el("div", { class: "pw-grid", id: "pw-vdot", hidden: "" }, [
       el("label", null, ["VDOT", vdotIn])
     ]);
+    // Youth toggle: age-grades the result against Daniels' Table 5.5 (ages 6-17).
+    const youthToggle = el("input", { type: "checkbox", id: "pw-youth", name: "pw-youth" });
+    const youthLabel = el("label", { class: "pw-toggle", for: "pw-youth" }, [
+      youthToggle, el("span", { class: "pw-switch", "aria-hidden": "true" }),
+      el("span", { text: "Youth mode (ages " + V.YOUTH_AGE_MIN + "-" + V.YOUTH_AGE_MAX + "): age-grade against Daniels' Table 5.5" })
+    ]);
+    const age = el("select", { id: "pw-age" });
+    for (let a = V.YOUTH_AGE_MIN; a <= V.YOUTH_AGE_MAX; a++) age.appendChild(el("option", { value: String(a), text: String(a) }));
+    age.value = "12";
+    const sex = el("select", { id: "pw-sex" }, [
+      el("option", { value: "M", text: "Boy" }), el("option", { value: "F", text: "Girl" })
+    ]);
+    const youthGrid = el("div", { class: "pw-grid", id: "pw-youth-grid", hidden: "" }, [
+      el("label", null, ["Age (years)", age]),
+      el("label", null, ["Boy / girl (the table has separate columns)", sex])
+    ]);
     const actions = el("div", { class: "pw-actions" }, [
       el("button", { type: "submit", text: "Calculate" }),
       el("span", { class: "pw-error", id: "pw-error", role: "alert" })
@@ -60,10 +80,61 @@
     form.appendChild(mode);
     form.appendChild(raceGrid);
     form.appendChild(vdotGrid);
+    form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
+    form.appendChild(youthGrid);
     form.appendChild(actions);
     root.appendChild(form);
     root.appendChild(el("div", { id: "pw-results", "aria-live": "polite" }));
-    return { form, select, custom, time, vdotIn, raceGrid, vdotGrid };
+    return { form, select, custom, time, vdotIn, raceGrid, vdotGrid, youthToggle, youthGrid, age, sex };
+  }
+
+  function readYouth(ui) {
+    if (!ui.youthToggle.checked) return null;
+    const age = parseInt(ui.age.value, 10);
+    const sex = ui.sex.value;
+    V.youthRow(age, sex);  // validates; throws ValueError on a tampered form
+    return { age: age, sex: sex };
+  }
+
+  function youthWho(youth) {
+    return youth.age + "-year-old " + (youth.sex === "F" ? "girl" : "boy");
+  }
+
+  function fmt1600(vdot) { return V.fmtPace(V.timeFor(V.YOUTH_1600_M, vdot) * 60); }
+
+  // The youth card: level on Table 5.5, the adult equivalent, and the next published level.
+  function renderYouth(vdot, youth) {
+    const r = V.youthLevel(vdot, youth.age, youth.sex);
+    const card = el("div", { class: "card youth" });
+    card.appendChild(el("h2", { text: "Youth level (Daniels' Table 5.5)" }));
+    if (r.status === "within") {
+      const lvl = Math.floor(r.level) === r.level ? String(r.level) : V.pyFixed(r.level, 1);
+      card.appendChild(el("div", { class: "pw-level", text: "Level " + lvl + " of 10 " + EM_DASH + " " + r.category }));
+      card.appendChild(el("p", { class: "pw-sub", text: "for a " + youthWho(youth) + ", on a 10-level scale where age " +
+        V.YOUTH_ADULT_ROW + "-38 is the reference band. Whole levels are the published rows; the decimal is interpolated." }));
+      const adultF = V.youthAdultEquivalent(r.level, "F"), adultM = V.youthAdultEquivalent(r.level, "M");
+      card.appendChild(el("p", { class: "pw-foot", text: "Same level as an adult (18-38) woman at VDOT " + V.pyFixed(adultF, 1) +
+        " (1,600 m in " + fmt1600(adultF) + ") or man at VDOT " + V.pyFixed(adultM, 1) + " (" + fmt1600(adultM) + ")." }));
+      const next = V.youthNextLevel(r.level, youth.age, youth.sex);
+      if (next) {
+        card.appendChild(el("p", { class: "pw-foot", text: "Next published level for this age, " + next.level + " (" + next.category +
+          "): VDOT " + V.pyFixed(next.vdot, 1) + ", 1,600 m in " + fmt1600(next.vdot) + "." }));
+      } else {
+        card.appendChild(el("p", { class: "pw-foot", text: "This is the top level Daniels publishes at age " + youth.age +
+          " (level " + r.maxLevel + "). He stops the younger rows early on purpose: \"" + V.YOUTH_QUOTE + "\"" }));
+      }
+    } else if (r.status === "above") {
+      card.appendChild(el("div", { class: "pw-level", text: "Above level " + r.maxLevel + " " + EM_DASH + " the top Daniels publishes at age " + youth.age }));
+      card.appendChild(el("p", { class: "pw-sub", text: "Level " + r.maxLevel + " for a " + youthWho(youth) + " is VDOT " + V.pyFixed(r.maxVdot, 1) +
+        " (1,600 m in " + fmt1600(r.maxVdot) + "). The book prints no higher level at this age, and this tool does not extrapolate one: \"" +
+        V.YOUTH_QUOTE + "\"" }));
+    } else {
+      card.appendChild(el("div", { class: "pw-level", text: "Below level 1 for age " + youth.age }));
+      card.appendChild(el("p", { class: "pw-sub", text: "Level 1 for a " + youthWho(youth) + " starts at VDOT " + V.pyFixed(r.minVdot, 1) +
+        " (1,600 m in " + fmt1600(r.minVdot) + "). Nothing is wrong with a slower time; the table simply starts there." }));
+    }
+    card.appendChild(el("p", { class: "pw-foot", text: "Daniels' Running Formula, 4th ed., ch. 5, Table 5.5; the under-18 values are partly extrapolated by the author from the ages he tested. Levels: Novice 1-2, Intermediate 3-5, Good 6-8, Elite 9-10. The 1,600 m times here are solved from the 1979 equations and can sit a second or two from the book's printed times." }));
+    return card;
   }
 
   function currentMode(form) {
@@ -115,7 +186,7 @@
     return el("td", { class: "num", text: V.isPointValue(miPair) || a === b ? a : a + "-" + b });
   }
 
-  function renderResults(vdot, race) {
+  function renderResults(vdot, race, youth) {
     const results = document.getElementById("pw-results");
     results.textContent = "";
 
@@ -123,15 +194,21 @@
     const head = el("div", { class: "card accent pw-head" });
     head.appendChild(el("div", { class: "pw-vdot", text: "VDOT " + V.pyFixed(vdot, 1) }));
     if (race) {
-      head.appendChild(el("div", { class: "pw-sub", text: race.label + " (" + V.pyFixed(race.meters, 0) + " m) in " + V.fmtRace(race.tMin) }));
+      head.appendChild(el("div", { class: "pw-sub", text: race.label + " (" + V.pyFixed(race.meters, 0) + " m) in " + V.fmtRace(race.tMin) +
+        (youth ? ", " + youthWho(youth) : "") }));
     } else {
-      head.appendChild(el("div", { class: "pw-sub", text: "entered directly " + EM_DASH + " see the caveats below on what a valid input is" }));
+      head.appendChild(el("div", { class: "pw-sub", text: "entered directly " + EM_DASH + " see the caveats below on what a valid input is" +
+        (youth ? " (" + youthWho(youth) + ")" : "") }));
     }
     results.appendChild(head);
+
+    // Youth level (Table 5.5) sits right under the headline so a coach sees it first
+    if (youth) results.appendChild(renderYouth(vdot, youth));
 
     // Training paces
     const paces = el("div", { class: "card" });
     paces.appendChild(el("h2", { text: "Training paces" }));
+    if (youth) paces.appendChild(el("p", { class: "pw-youth-note" }, [el("span", { class: "flag", text: "youth" }), " " + V.YOUTH_PACE_NOTE]));
     const ptable = el("table");
     ptable.appendChild(el("thead", null, [el("tr", null, [
       el("th", { text: "Band" }), el("th", { text: "per mile" }), el("th", { text: "per km" }), el("th", { text: "mph" })
@@ -161,6 +238,7 @@
     const ebody = el("tbody");
     const column = race ? race.column : null;
     for (const p of V.predictions(vdot, column)) {
+      if (youth && p.column > YOUTH_LAST_COLUMN) continue;
       const time = el("td", { class: "num" }, [el("span", { text: p.text })]);
       if (p.extrapolated) time.appendChild(el("span", { class: "flag", text: PREDICTION_EXTRAPOLATION_LABEL }));
       ebody.appendChild(el("tr", { class: p.extrapolated ? "extrap" : "" }, [el("td", { text: NAMED[p.column][1] }), time]));
@@ -168,14 +246,16 @@
     etable.appendChild(ebody);
     eq.appendChild(etable);
     if (!race) eq.appendChild(el("p", { class: "pw-foot", text: VDOT_MODE_NOTE }));
+    if (youth) eq.appendChild(el("p", { class: "pw-foot", text: YOUTH_PREDICTION_NOTE }));
     results.appendChild(eq);
   }
 
   function calculate(ui) {
     clearError();
+    const youth = readYouth(ui);
     if (currentMode(ui.form) === "vdot") {
       const vd = readVdot(ui);
-      renderResults(vd, null);
+      renderResults(vd, null, youth);
       return;
     }
     const race = readRace(ui);
@@ -184,7 +264,7 @@
     const vdot = V.vdotFromRace(race.meters, tMin);
     V.checkRenderable(vdot);
     race.tMin = tMin;
-    renderResults(vdot, race);
+    renderResults(vdot, race, youth);
   }
 
   function renderCaveats() {
@@ -213,6 +293,11 @@
       if (ev.target === ui.select) {
         document.getElementById("pw-custom-wrap").hidden = ui.select.value !== "custom";
         if (ui.select.value === "custom") ui.custom.focus();
+      }
+      if (ev.target === ui.youthToggle) {
+        ui.youthGrid.hidden = !ui.youthToggle.checked;
+        clearError();
+        if (ui.youthToggle.checked) ui.age.focus();
       }
     });
     ui.form.addEventListener("submit", function (ev) {

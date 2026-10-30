@@ -102,6 +102,56 @@
   // input race in DISTANCES order is flagged as an extrapolation.
   const EXTRAPOLATION_COLUMNS = 3;
 
+  // ---- Youth levels (widget-only; no Python counterpart) ----------------------------
+  // Daniels' Running Formula, 4th ed., ch. 5, Table 5.5 "VDOT Levels for Male and Female
+  // Runners Aged 6-18 for 1,600-Meter Times" (table credited to the Run SMART Project
+  // calculator). Ten performance levels: Novice 1-2, Intermediate 3-5, Good 6-8, Elite
+  // 9-10. The age-18 row is the 18-38 reference band of Table 5.6. Each entry is the VDOT
+  // at that level, index 0 = level 1; null where the book prints a dash ("no time
+  // needed"): Daniels stops each young age's row early on purpose -- "I want to avoid
+  // encouraging very young runners to work too hard" -- and this port keeps the cut-off.
+  // He also states the under-18 values are partly extrapolated from the ages he tested.
+  // Transcribed 2026-10-30 from the epub; every value solves back to the printed 1,600 m
+  // time within 1.5 s at VDOT >= 24 (the calculator and eq (1)-(3) diverge smoothly
+  // below that, up to 10 s at VDOT 16).
+  const YOUTH_LEVELS = {
+    18: { M: [35.0, 40.3, 45.0, 50.0, 55.0, 60.0, 65.0, 70.0, 75.0, 80.0],
+          F: [31.4, 35.8, 40.2, 44.7, 49.1, 53.6, 58.1, 62.5, 67.0, 71.4] },
+    17: { M: [33.5, 38.4, 43.3, 48.2, 53.1, 58.0, 62.9, 67.7, 72.5, 77.3],
+          F: [30.2, 34.6, 38.9, 43.2, 47.5, 51.8, 56.1, 60.4, 64.7, 69.0] },
+    16: { M: [32.0, 36.8, 41.5, 46.2, 50.9, 55.6, 60.3, 65.0, 69.7, 74.4],
+          F: [29.0, 33.3, 37.5, 41.7, 45.9, 50.1, 54.3, 58.5, 62.7, 66.9] },
+    15: { M: [30.5, 35.1, 39.7, 44.3, 48.9, 53.4, 57.9, 62.4, 66.9, 71.4],
+          F: [27.8, 31.9, 36.0, 40.1, 44.2, 48.3, 52.4, 56.5, 60.6, 64.7] },
+    14: { M: [28.9, 33.3, 37.7, 42.1, 46.5, 50.9, 55.3, 59.7, 64.0, 68.3],
+          F: [26.5, 30.5, 34.5, 38.5, 42.5, 46.5, 50.5, 54.5, 58.5, 62.4] },
+    13: { M: [27.3, 31.5, 35.7, 39.9, 44.1, 48.3, 52.5, 56.7, 60.9, null],
+          F: [25.2, 29.1, 33.0, 36.9, 40.8, 44.7, 48.6, 52.4, 56.2, null] },
+    12: { M: [25.7, 29.8, 33.8, 37.8, 41.8, 45.8, 49.8, 53.8, null, null],
+          F: [23.9, 27.7, 31.5, 35.3, 39.0, 42.7, 46.4, 50.1, null, null] },
+    11: { M: [24.1, 28.0, 31.8, 35.6, 39.4, 43.2, 47.0, null, null, null],
+          F: [22.6, 26.2, 29.8, 33.4, 37.0, 40.6, 44.2, null, null, null] },
+    10: { M: [22.5, 26.2, 29.8, 33.4, 37.0, 40.6, null, null, null, null],
+          F: [21.3, 24.8, 28.3, 31.8, 35.2, 38.6, null, null, null, null] },
+    9:  { M: [20.9, 24.3, 27.7, 31.1, 34.5, null, null, null, null, null],
+          F: [20.0, 23.3, 26.6, 29.9, 33.2, null, null, null, null, null] },
+    8:  { M: [19.3, 22.5, 25.7, 28.9, null, null, null, null, null, null],
+          F: [18.7, 21.8, 24.9, 28.0, null, null, null, null, null, null] },
+    7:  { M: [17.7, 20.7, 23.6, null, null, null, null, null, null, null],
+          F: [17.4, 20.3, 23.2, null, null, null, null, null, null, null] },
+    6:  { M: [16.1, 18.8, null, null, null, null, null, null, null, null],
+          F: [16.1, 18.8, null, null, null, null, null, null, null, null] }
+  };
+  const YOUTH_AGE_MIN = 6;
+  const YOUTH_AGE_MAX = 17;     // 18 and up is the adult reference row
+  const YOUTH_ADULT_ROW = 18;
+  const YOUTH_1600_M = 1600.0;
+  const YOUTH_CATEGORIES = [[1, "Novice"], [3, "Intermediate"], [6, "Good"], [9, "Elite"]];
+  const YOUTH_QUOTE = "I want to avoid encouraging very young runners to work too hard.";
+  const YOUTH_PACE_NOTE = "Daniels publishes no training-pace table for ages 6-17; these rows are the adult " +
+    "ch. 4 bands applied to this race, and Daniels & Gilbert (1979) warn that a child's computed value " +
+    "underestimates true VO2max. Practice targets for a coach's judgment, not prescriptions.";
+
   class ValueError extends Error {
     constructor(message) { super(message); this.name = "ValueError"; }
   }
@@ -354,6 +404,70 @@
     });
   }
 
+  // ---- Youth levels: where a VDOT sits on Table 5.5 for an age and sex -------------
+
+  function youthRow(age, sex) {
+    if (!(Number.isInteger(age) && YOUTH_AGE_MIN <= age && age <= YOUTH_ADULT_ROW)) {
+      throw new ValueError("age must be a whole number from " + YOUTH_AGE_MIN + " to " + YOUTH_AGE_MAX + ", got " + String(age));
+    }
+    if (sex !== "M" && sex !== "F") throw new ValueError("sex must be M or F, got " + pyAscii(String(sex)));
+    return YOUTH_LEVELS[age][sex];
+  }
+
+  function youthCategory(level) {
+    let name = YOUTH_CATEGORIES[0][1];
+    for (const [from, label] of YOUTH_CATEGORIES) if (level >= from) name = label;
+    return name;
+  }
+
+  // Published top level for this age/sex (the last non-null entry).
+  function youthMaxLevel(age, sex) {
+    const row = youthRow(age, sex);
+    let n = 0;
+    row.forEach(v => { if (v !== null) n += 1; });
+    return n;
+  }
+
+  // Fractional level by linear interpolation between the published level VDOTs.
+  // status: "within" (level set), "below" (slower than level 1; level = null),
+  // "above" (faster than the top level Daniels prints at this age; level = null).
+  function youthLevel(vdot, age, sex) {
+    const row = youthRow(age, sex);
+    const max = youthMaxLevel(age, sex);
+    const base = { age: age, sex: sex, vdot: vdot, maxLevel: max, minVdot: row[0], maxVdot: row[max - 1] };
+    if (vdot < row[0]) return Object.assign(base, { status: "below", level: null });
+    if (vdot > row[max - 1]) return Object.assign(base, { status: "above", level: null });
+    let level = max;
+    for (let i = 0; i < max - 1; i++) {
+      if (vdot <= row[i + 1]) { level = (i + 1) + (vdot - row[i]) / (row[i + 1] - row[i]); break; }
+    }
+    // Snap to the whole level when within display rounding (a 7:18 solves to VDOT 38.59,
+    // a hair under the printed 38.6, and must read as level 6, not 5.9996).
+    const whole = Math.round(level);
+    if (Math.abs(level - whole) < 0.005) level = whole;
+    return Object.assign(base, { status: "within", level: level, category: youthCategory(level) });
+  }
+
+  // The VDOT an adult (18-38) of the given sex needs for the same (fractional) level.
+  function youthAdultEquivalent(level, sex) {
+    const row = youthRow(YOUTH_ADULT_ROW, sex);
+    if (!(1 <= level && level <= 10)) throw new ValueError("level must be 1-10, got " + String(level));
+    const i = Math.min(Math.floor(level), 9);
+    if (i === 10 || level === i) return row[i - 1];
+    return row[i - 1] + (level - i) * (row[i] - row[i - 1]);
+  }
+
+  // The next whole level above `level` that Daniels publishes for this age/sex, with
+  // its VDOT and 1,600 m time; null when the runner is already at the published top.
+  function youthNextLevel(level, age, sex) {
+    const row = youthRow(age, sex);
+    const max = youthMaxLevel(age, sex);
+    const next = Math.floor(level) + 1;
+    if (next > max) return null;
+    const vd = row[next - 1];
+    return { level: next, vdot: vd, time1600: timeFor(YOUTH_1600_M, vd), category: youthCategory(next) };
+  }
+
   function renderText(vdot, race) {
     // Same text as the Python render(); race = [dist_m, t_min, dist_label] or null.
     checkRenderable(vdot);
@@ -489,6 +603,47 @@
     check("VDOT mode flags nothing", predictions(50, null).every(p => !p.extrapolated));
     check("race mode flags 1500/half/marathon from a 5k",
       predictions(50, 4).filter(p => p.extrapolated).map(p => p.name).join(",") === "1500m,half,marathon");
+    // Youth levels (Table 5.5): Daniels' own worked example, then the published cut-offs
+    const girl10 = youthLevel(vdotFromRace(YOUTH_1600_M, 7 + 18 / 60), 10, "F");
+    check("Table 5.5: 10-year-old girl, 1600 in 7:18 -> level " + pyFixed(girl10.level || 0, 2) + " (book: level 6)",
+      girl10.status === "within" && girl10.level === 6 && girl10.category === "Good" && youthNextLevel(girl10.level, 10, "F") === null);
+    const secs = (vd) => timeFor(YOUTH_1600_M, vd) * 60;
+    check("level 6 = an 18-38 woman at 5:26 / man at 4:55 (book's example)",
+      Math.abs(secs(youthAdultEquivalent(6, "F")) - 326) < 2 && Math.abs(secs(youthAdultEquivalent(6, "M")) - 295) < 2);
+    check("adult equivalent interpolates (level 6.5 F between 53.6 and 58.1)",
+      Math.abs(youthAdultEquivalent(6.5, "F") - 55.85) < 1e-9 && youthAdultEquivalent(10, "M") === 80.0);
+    let exact = true, mono = true;
+    const ages = Object.keys(YOUTH_LEVELS).map(Number).sort((a, b) => a - b);
+    for (const age of ages) {
+      for (const sex of ["M", "F"]) {
+        const row = YOUTH_LEVELS[age][sex];
+        row.forEach((vd, i) => {
+          if (vd === null) return;
+          if (Math.abs(youthLevel(vd, age, sex).level - (i + 1)) > 1e-9) exact = false;
+          if (i > 0 && row[i - 1] !== null && vd <= row[i - 1]) mono = false;
+          const younger = YOUTH_LEVELS[age - 1];
+          if (younger && younger[sex][i] !== null && younger[sex][i] >= vd) mono = false;
+        });
+      }
+    }
+    check("every Table 5.5 cell maps back to its own whole level", exact);
+    check("Table 5.5 VDOTs rise with level and with age", mono);
+    check("published tops: age 6 -> 2, 10 -> 6, 13 -> 9, 14 -> 10",
+      youthMaxLevel(6, "M") === 2 && youthMaxLevel(10, "F") === 6 && youthMaxLevel(13, "M") === 9 && youthMaxLevel(14, "F") === 10);
+    check("above the published top is reported, never extrapolated",
+      youthLevel(30, 6, "M").status === "above" && youthLevel(30, 6, "M").level === null && youthLevel(30, 6, "M").maxVdot === 18.8);
+    check("below level 1 is reported", youthLevel(25, 14, "M").status === "below" && youthLevel(25, 14, "M").minVdot === 28.9);
+    check("next level: a level-6 10-year-old girl is at the published top", youthNextLevel(6, 10, "F") === null);
+    const nx = youthNextLevel(5.4, 12, "M");
+    check("next level: 12-year-old boy at 5.4 -> level 6, VDOT 45.8, 1600 ~6:16",
+      nx.level === 6 && nx.vdot === 45.8 && Math.abs(nx.time1600 * 60 - 376) < 2 && nx.category === "Good");
+    check("youth categories: 1 Novice, 3 Intermediate, 6 Good, 9 Elite",
+      youthCategory(1) === "Novice" && youthCategory(2.9) === "Novice" && youthCategory(3) === "Intermediate" &&
+      youthCategory(5.99) === "Intermediate" && youthCategory(6) === "Good" && youthCategory(9) === "Elite");
+    check("youth rejects age 5, age 19, sex X; accepts the age-18 reference row",
+      rejects(a => youthRow(a, "M"), 5) && rejects(a => youthRow(a, "M"), 19) && rejects(s => youthRow(12, s), "X") &&
+      youthRow(18, "F")[5] === 53.6);
+    check("youth notes are ASCII", isAscii(YOUTH_QUOTE) && isAscii(YOUTH_PACE_NOTE));
     log(fails === 0 ? "GREEN" : "RED -- " + fails + " failure(s)");
     return fails ? 1 : 0;
   }
@@ -499,7 +654,9 @@
     isAscii, pyAscii, pyStrip, pyFloat, pyFixed, pyRound,
     vo2At, velAt, pctMax, vdotRaw, vdotFromRace, timeFor, parseTime, parseDist,
     fmtPace, fmtRace, paceSecs, trainingPaces, isPointValue, eRowExtrapolated, checkRenderable,
-    nearestColumn, isExtrapolated, predictions, renderText, selfTest
+    nearestColumn, isExtrapolated, predictions, renderText, selfTest,
+    YOUTH_LEVELS, YOUTH_AGE_MIN, YOUTH_AGE_MAX, YOUTH_ADULT_ROW, YOUTH_1600_M, YOUTH_CATEGORIES, YOUTH_QUOTE, YOUTH_PACE_NOTE,
+    youthRow, youthCategory, youthMaxLevel, youthLevel, youthAdultEquivalent, youthNextLevel
   };
 }));
 
