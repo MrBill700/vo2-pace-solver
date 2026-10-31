@@ -50,6 +50,13 @@
   .pw-youth-note .flag { margin: 0 0.3rem 0 0; }
   .pw-error:empty { display: none; }
 
+  /* season plans */
+  .pw-plan-row { margin-top: 1rem; }
+  .card.plan { border-left: 4px solid var(--green); border-radius: 4px; }
+  .card.plan h3 { margin: 1rem 0 0.4rem; font-size: 1rem; color: var(--navy); }
+  .card.plan tr.min td { font-weight: 600; }
+  .card.plan tr.min td.num { font-weight: 700; }
+
   /* results */
   #pw-results { margin-top: 1.25rem; }
   .pw-vdot { font-size: 2.4rem; font-weight: 700; color: var(--navy); line-height: 1.1; }
@@ -92,7 +99,7 @@
   <p>Daniels &amp; Gilbert equations, solved in your browser</p>
 </header>
 <div class="container">
-  <p class="lead">Enter one recent, all-out race (or a VDOT) to get Daniels' E/M/T/I/R training paces per mile, per km and as treadmill mph, plus equivalent race times at ten distances. Youth mode age-grades a 6-to-17-year-old's race against Daniels' Table 5.5 for practice planning. Everything runs on this page; nothing you type is sent or stored anywhere.</p>
+  <p class="lead">Enter one recent, all-out race (or a VDOT) to get Daniels' E/M/T/I/R training paces per mile, per km and as treadmill mph, plus equivalent race times at ten distances. Youth mode age-grades a 6-to-17-year-old's race against Daniels' Table 5.5 for practice planning, and the optional season plan prints a dated summer-preseason or winter block in Daniels' minutes with this runner's distances. Everything runs on this page; nothing you type is sent or stored anywhere.</p>
 
   <div class="card" id="pace-widget">
     <noscript>This calculator needs JavaScript. The same math is available as a command-line tool at <a href="https://github.com/MrBill700/vo2-pace-solver">github.com/MrBill700/vo2-pace-solver</a>.</noscript>
@@ -100,7 +107,7 @@
 
   <div class="fineprint">
     <p>VDOT is a trademark of The Run SMART Project / V.O2. This widget is not affiliated with or endorsed by Jack Daniels, V.O2, or Human Kinetics; the term is used descriptively to identify the published method. Equations: Daniels &amp; Gilbert (1979), Oxygen Power; intensity bands: Daniels' Running Formula, 4th ed., ch. 4.</p>
-    <p>Enter a recent, all-out race or time trial &mdash; a held-back effort only sets a floor. The equations are calibrated on adults. Youth mode adds only what Daniels publishes for young runners &mdash; the performance levels of Table 5.5 (ch. 5), which rate a 1,600 m time across ages 6-18 and both sexes &mdash; and keeps his deliberate cut-off at the top of each young age rather than extrapolating. The training paces shown in youth mode are the adult bands applied to the child's race; Daniels &amp; Gilbert note a child's computed value underestimates true VO2max. Training guidance, not medical advice.</p>
+    <p>Enter a recent, all-out race or time trial &mdash; a held-back effort only sets a floor. The equations are calibrated on adults. Youth mode adds only what Daniels publishes for young runners &mdash; the performance levels of Table 5.5 (ch. 5), which rate a 1,600 m time across ages 6-18 and both sexes &mdash; and keeps his deliberate cut-off at the top of each young age rather than extrapolating. The training paces shown in youth mode are the adult bands applied to the child's race; Daniels &amp; Gilbert note a child's computed value underestimates true VO2max. The season plans are Daniels' Table 14.1 (ch. 14, cross country Phase I) and Table 8.1 (ch. 8, the white plan), shown one block at a time in the minutes he wrote; only the dates and the distance estimates are computed here, and both plans are written for high school and older. Training guidance, not medical advice.</p>
     <p>Source, tests and the command-line version: <a href="https://github.com/MrBill700/vo2-pace-solver">github.com/MrBill700/vo2-pace-solver</a> (MIT).</p>
     <details id="pw-caveats"></details>
   </div>
@@ -111,7 +118,7 @@
 </div>
 <!-- Bump the ?v= on both tags together whenever either file changes: browsers cache them
      by heuristic otherwise, and a new widget.js over an old vdot.js breaks the form. -->
-<script src="vdot.js?v=20261030d"></script>
-<script src="widget.js?v=20261030d"></script>
+<script src="vdot.js?v=20261030e"></script>
+<script src="widget.js?v=20261030e"></script>
 </body>
 </html>

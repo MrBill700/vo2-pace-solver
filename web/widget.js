@@ -27,6 +27,17 @@
   ];
   const YOUTH_PREDICTION_NOTE = "Youth mode lists school race distances only (2k through 2 miles in middle school, 5k in high school): " +
     "Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
+  // Season plans: the off-season blocks a school coach fills in around the racing season.
+  const PLAN_OPTIONS = [
+    ["", "None"],
+    ["preseason", "Summer preseason: 6 weeks before Sep 1 (Daniels ch. 14, Table 14.1)"],
+    ["preseason-new", "Summer preseason for a new or idle runner (white plan Phase IV, per ch. 14 p. 217)"],
+    ["white", "Winter: the white plan, 16 weeks (Daniels ch. 8, Table 8.1)"]
+  ];
+  const PRESEASON_NEW_NOTE = "Daniels, ch. 14 (p. 217): runners who haven't been doing much running lately, or who are relative " +
+    "beginners, should take Phase IV of the white plan as their preseason instead of Table 14.1. Repeat the week for the six weeks.";
+  const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const MIN_DAY_LABEL = "minimum day";
 
   function el(tag, attrs, children) {
     const node = document.createElement(tag);
@@ -83,6 +94,18 @@
       el("label", null, ["Age (years)", age]),
       el("label", null, ["Boy / girl (the table has separate columns)", sex])
     ]);
+    // Season plan: which off-season block to print for this runner, dated from a start day.
+    const planSel = el("select", { id: "pw-plan" });
+    PLAN_OPTIONS.forEach(([value, label]) => planSel.appendChild(el("option", { value: value, text: label })));
+    const planStart = el("input", { id: "pw-plan-start", type: "date" });
+    const planPhase = el("select", { id: "pw-plan-phase" });
+    for (let p = 1; p <= 4; p++) {
+      planPhase.appendChild(el("option", { value: String(p), text: "Phase " + p + " (weeks " + (4 * p - 3) + "-" + (4 * p) + ")" }));
+    }
+    const planGrid = el("div", { class: "pw-grid", id: "pw-plan-grid", hidden: "" }, [
+      el("label", null, ["Plan starts on", planStart]),
+      el("label", { id: "pw-plan-phase-wrap", hidden: "" }, ["Show phase", planPhase])
+    ]);
     const actions = el("div", { class: "pw-actions" }, [
       el("button", { type: "submit", text: "Calculate" }),
       el("span", { class: "pw-error", id: "pw-error", role: "alert" })
@@ -96,10 +119,128 @@
       form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
       form.appendChild(youthGrid);
     }
+    if (Array.isArray(V.WHITE_PLAN) && typeof V.weekRange === "function") {
+      form.appendChild(el("div", { class: "pw-grid pw-plan-row" }, [el("label", null, ["Season plan (optional)", planSel])]));
+      form.appendChild(planGrid);
+    }
     form.appendChild(actions);
     root.appendChild(form);
     root.appendChild(el("div", { id: "pw-results", "aria-live": "polite" }));
-    return { form, select, custom, time, vdotIn, raceGrid, vdotGrid, youthToggle, youthGrid, age, sex };
+    return { form, select, custom, time, vdotIn, raceGrid, vdotGrid, youthToggle, youthGrid, age, sex,
+             planSel, planStart, planPhase, planGrid };
+  }
+
+  function todayISO() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  function defaultPlanStart(kind) {
+    if (kind === "preseason" || kind === "preseason-new") return V.defaultPreseasonStart(todayISO());
+    return todayISO();
+  }
+
+  function readPlan(ui) {
+    if (!ui.planSel || ui.planSel.value === "") return null;
+    const kind = ui.planSel.value;
+    if (!PLAN_OPTIONS.some(([v]) => v === kind)) throw new V.ValueError("Unknown plan");
+    if (V.pyStrip(ui.planStart.value) === "") ui.planStart.value = defaultPlanStart(kind);
+    V.parseISODate(ui.planStart.value);  // validates
+    const phase = parseInt(ui.planPhase.value, 10);
+    if (kind === "white" && !(phase >= 1 && phase <= 4)) throw new V.ValueError("Pick a white-plan phase 1-4");
+    return { kind: kind, start: ui.planStart.value, phase: phase };
+  }
+
+  function fmtDay(iso) {
+    const d = V.parseISODate(iso);
+    return MONTHS[d.getUTCMonth()] + " " + d.getUTCDate();
+  }
+
+  function fmtSpan(startISO, firstWeek, lastWeek) {
+    const a = V.weekRange(startISO, firstWeek)[0], b = V.weekRange(startISO, lastWeek)[1];
+    return fmtDay(a) + " - " + fmtDay(b);
+  }
+
+  function fmtMiles(vdot, minutes) {
+    if (minutes <= 0) return "walk";
+    const [lo, hi] = V.eDistanceMiles(vdot, minutes);
+    const a = V.pyFixed(lo, 1), b = V.pyFixed(hi, 1);
+    return (a === b ? a : a + "-" + b) + " mi";
+  }
+
+  function ePaceLine(vdot) {
+    const [, mi, km] = V.trainingPaces(vdot)[0];
+    const flag = V.eRowExtrapolated(vdot) ? " (" + E_EXTRAPOLATION_LABEL + ")" : "";
+    return "E pace for this runner: " + V.fmtPace(mi[0]) + "-" + V.fmtPace(mi[1]) + " /mi, " +
+      V.fmtPace(km[0]) + "-" + V.fmtPace(km[1]) + " /km, " + fmtMph(mi[0]) + "-" + fmtMph(mi[1]) + " mph" + flag + ".";
+  }
+
+  function whiteTable(vdot, phaseObj) {
+    const t = el("table");
+    t.appendChild(el("thead", null, [el("tr", null, [
+      el("th", { text: "Day" }), el("th", { text: "Workout" }), el("th", { text: "Run min" }), el("th", { text: "Total" }), el("th", { text: "Est. distance" })
+    ])]));
+    const body = el("tbody");
+    for (const [day, workout, runMin, totalMin, minimum] of phaseObj.days) {
+      const w = el("td", { text: workout });
+      if (minimum) w.appendChild(el("span", { class: "flag", text: MIN_DAY_LABEL }));
+      body.appendChild(el("tr", { class: minimum ? "min" : "" }, [
+        el("td", { class: "num", text: String(day) }), w,
+        el("td", { class: "num", text: String(runMin) }), el("td", { class: "num", text: String(totalMin) }),
+        el("td", { class: "num", text: fmtMiles(vdot, runMin) })
+      ]));
+    }
+    t.appendChild(body);
+    return t;
+  }
+
+  function renderPlan(vdot, plan) {
+    const card = el("div", { class: "card plan" });
+    if (plan.kind === "preseason") {
+      card.appendChild(el("h2", { text: "Summer preseason: " + V.XC_PRESEASON_WEEKS + " weeks, " +
+        fmtSpan(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
+      card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
+      V.XC_PRESEASON.forEach((block, i) => {
+        const [w1, w2] = block.weeks;
+        card.appendChild(el("h3", { text: "Weeks " + w1 + "-" + w2 + ": " + fmtSpan(plan.start, w1, w2) }));
+        const t = el("table");
+        t.appendChild(el("thead", null, [el("tr", null, [
+          el("th", { text: "Day" }), el("th", { text: "Workout" }), el("th", { text: "Est. distance" })
+        ])]));
+        const body = el("tbody");
+        for (const [days, workout, minutes] of block.days) {
+          body.appendChild(el("tr", null, [el("td", { text: days }), el("td", { text: workout }), el("td", { class: "num", text: fmtMiles(vdot, minutes) })]));
+        }
+        t.appendChild(body);
+        card.appendChild(t);
+        card.appendChild(el("p", { class: "pw-foot", text: "All seven days at this E pace, L run at its 60-min cap: about " +
+          fmtMiles(vdot, V.XC_PRESEASON_WEEK_MIN[i]) + " a week." }));
+      });
+      card.appendChild(el("p", { class: "pw-foot", text: V.XC_L_RULE + " " + V.STRIDES_DEF }));
+      card.appendChild(el("p", { class: "pw-foot", text: "Table 14.1 can be shortened if six weeks are not available; " +
+        "a relative beginner should use it for at least three or four weeks, or take the white-plan Phase IV option instead." }));
+    } else if (plan.kind === "preseason-new") {
+      const ph = V.WHITE_PLAN[3];
+      card.appendChild(el("h2", { text: "Summer preseason, new or idle runner: white plan Phase 4, " +
+        fmtSpan(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
+      card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
+      card.appendChild(el("p", { class: "pw-youth-note", text: PRESEASON_NEW_NOTE }));
+      card.appendChild(whiteTable(vdot, ph));
+      card.appendChild(el("p", { class: "pw-foot", text: V.STRIDES_DEF + " Running minutes exclude walking; Phase 4 minutes are the book's approximate values." }));
+    } else {
+      const ph = V.WHITE_PLAN[plan.phase - 1];
+      const [w1, w2] = ph.weeks;
+      card.appendChild(el("h2", { text: "Winter: white plan Phase " + ph.phase + ", weeks " + w1 + "-" + w2 + ", " + fmtSpan(plan.start, w1, w2) }));
+      card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
+      const weeks = [];
+      for (let w = w1; w <= w2; w++) weeks.push("wk " + w + ": " + fmtSpan(plan.start, w, w));
+      card.appendChild(el("p", { class: "pw-youth-note", text: "Repeat this week four times. " + weeks.join("; ") + "." }));
+      card.appendChild(whiteTable(vdot, ph));
+      card.appendChild(el("p", { class: "pw-foot", text: V.WHITE_PLAN_NOTE + (ph.phase === 4 ? " " + V.STRIDES_DEF : "") +
+        " Running minutes exclude walking." }));
+    }
+    card.appendChild(el("p", { class: "pw-foot", text: V.PLAN_SCOPE_NOTE }));
+    return card;
   }
 
   function readYouth(ui) {
@@ -210,7 +351,7 @@
     return el("td", { class: "num", text: V.isPointValue(miPair) || a === b ? a : a + "-" + b });
   }
 
-  function renderResults(vdot, race, youth) {
+  function renderResults(vdot, race, youth, plan) {
     const results = document.getElementById("pw-results");
     results.textContent = "";
 
@@ -228,6 +369,9 @@
 
     // Youth level (Table 5.5) sits right under the headline so a coach sees it first
     if (youth) results.appendChild(renderYouth(vdot, youth));
+
+    // Season plan, if one was asked for: the thing a coach came for goes above the pace table
+    if (plan) results.appendChild(renderPlan(vdot, plan));
 
     // Training paces
     const paces = el("div", { class: "card" });
@@ -282,9 +426,10 @@
   function calculate(ui) {
     clearError();
     const youth = readYouth(ui);
+    const plan = readPlan(ui);
     if (currentMode(ui.form) === "vdot") {
       const vd = readVdot(ui);
-      renderResults(vd, null, youth);
+      renderResults(vd, null, youth, plan);
       return;
     }
     const race = readRace(ui);
@@ -293,7 +438,7 @@
     const vdot = V.vdotFromRace(race.meters, tMin);
     V.checkRenderable(vdot);
     race.tMin = tMin;
-    renderResults(vdot, race, youth);
+    renderResults(vdot, race, youth, plan);
   }
 
   function renderCaveats() {
@@ -327,6 +472,13 @@
         ui.youthGrid.hidden = !ui.youthToggle.checked;
         clearError();
         if (ui.youthToggle.checked) ui.age.focus();
+      }
+      if (ev.target === ui.planSel) {
+        const kind = ui.planSel.value;
+        ui.planGrid.hidden = kind === "";
+        document.getElementById("pw-plan-phase-wrap").hidden = kind !== "white";
+        if (kind !== "") ui.planStart.value = defaultPlanStart(kind);
+        clearError();
       }
     });
     ui.form.addEventListener("submit", function (ev) {

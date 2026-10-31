@@ -152,6 +152,86 @@
     "ch. 4 bands applied to this race, and Daniels & Gilbert (1979) warn that a child's computed value " +
     "underestimates true VO2max. Practice targets for a coach's judgment, not prescriptions.";
 
+  // ---- Season plans (widget only; the Python CLI has none) ------------------------
+  // Two Daniels plans a youth coach uses outside the racing season, kept in the minutes
+  // Daniels wrote them in. The only per-athlete arithmetic is the E pace from VDOT, which
+  // turns each session's running minutes into an expected distance.
+  //
+  // Daniels' Running Formula 4th ed., ch. 14 "Cross Country", Table 14.1 -- Phase I
+  // Training Plan for Cross Country (print p. 217). Daniels: complete phases I and II
+  // "during the summer, before the start of school in the fall"; Table 14.1 "can be
+  // shortened if 6 weeks are not available, but for relative beginners should be used
+  // for at least 3 or 4 weeks." Runners "who haven't been doing much running lately, or
+  // who are relative beginners" take white Phase IV (below) as their phase I instead.
+  const XC_PRESEASON_WEEKS = 6;
+  const XC_PRESEASON = [
+    { weeks: [1, 3], days: [
+      ["Sunday", "L run of the lesser of 60 min and 30% of week's total mileage", 60],
+      ["Mon, Tue, Thu, Fri", "E day of about 30 min", 30],
+      ["Wed, Sat", "30-40 min E + 6 ST", 35]
+    ] },
+    { weeks: [4, 6], days: [
+      ["Sunday", "L run of the lesser of 60 min and 30% of week's total mileage", 60],
+      ["Mon, Tue, Fri", "E day of about 30-40 min", 35],
+      ["Wed, Thu, Sat", "20 min E + 8 ST + 10 min E", 30]
+    ] }
+  ];
+  // Running minutes in a full seven-day Table 14.1 week (L counted at its 60-min cap;
+  // "30-40 min" counted at 35). Used only for the weekly-distance estimate.
+  const XC_PRESEASON_WEEK_MIN = [60 + 4 * 30 + 2 * 35, 60 + 3 * 35 + 3 * 30];
+  const XC_L_RULE = "L run: the lesser of 60 min and 30% of the week's total mileage; no single day over 25% of the week; " +
+    "at least 30 min of E running on the other days (Daniels ch. 14, Phase I).";
+
+  // Ch. 8 "Fitness Training", Table 8.1 -- the White starting plan (print pp. 125-126).
+  // Walk/run in minutes, no quality work, strides from Phase IV. Rows are Daniels' seven
+  // days; the bold "minimum participation" days are 1, 3 and 5 (p. 124). runMin excludes
+  // walking; totalMin is the whole session. Phase IV minutes are the book's "about" values.
+  const WHITE_PLAN = [
+    { phase: 1, weeks: [1, 4], days: [
+      [1, "5 min W + 10 x 1 min E w/1 min W recoveries + 5 min W", 10, 30, true],
+      [2, "If you train today, repeat day 1 workout", 10, 30, false],
+      [3, "5 min W + 7 x 2 min E w/1 min W recoveries + 4 min W", 14, 30, true],
+      [4, "If you train today, repeat day 3 workout", 14, 30, false],
+      [5, "5 min W + 6 x 1 min E w/30 sec W + 8 x 30 sec E w/1 min W + 4 min W", 10, 30, true],
+      [6, "If you train today, repeat day 5 workout", 10, 30, false],
+      [7, "If you train today, repeat day 1 workout", 10, 30, false]
+    ] },
+    { phase: 2, weeks: [5, 8], days: [
+      [1, "3 min E + 3 min W + 10 x 2 min E w/1 min W recoveries + 4 min W", 23, 40, true],
+      [2, "If you train today, repeat day 1 workout", 23, 40, false],
+      [3, "3 min E + 3 min W + 6 x 3 min E w/2 min W recoveries + 4 min W", 21, 40, true],
+      [4, "If you train today, repeat day 3 workout", 21, 40, false],
+      [5, "3 min E + 3 min W + 20 x 1 min E w/30 sec W recoveries + 4 min W", 23, 40, true],
+      [6, "If you train today, repeat day 5 workout", 23, 40, false],
+      [7, "If you train today, repeat day 1 workout", 23, 40, false]
+    ] },
+    { phase: 3, weeks: [9, 12], days: [
+      [1, "10 min E + 3 min W + 10 min E + 3 min W + 10 min E + 4 min W", 30, 40, true],
+      [2, "If you train today, repeat day 1 workout", 30, 40, false],
+      [3, "2 min W + 4 x 8 min E w/1 min W recoveries + 2 min W", 32, 40, true],
+      [4, "If you train today, repeat day 3 workout", 32, 40, false],
+      [5, "5 min W + 20 min E + 5 min W + 10 min E + 5 min W", 30, 45, true],
+      [6, "Day 5 session can be done on either day 5, day 6, or both", 30, 45, false],
+      [7, "If you train today, make it a 30 min W", 0, 30, false]
+    ] },
+    { phase: 4, weeks: [13, 16], days: [
+      [1, "30 min E + 6 ST + 6 min E", 38, 44, true],
+      [2, "If you train today, repeat day 1 workout", 38, 44, false],
+      [3, "10 min E + 5 ST + 10 min E + 5 ST + 10 min E", 33, 43, true],
+      [4, "If you train today, repeat day 3 workout", 33, 43, false],
+      [5, "Repeat day 1 workout", 38, 44, true],
+      [6, "Day 5 session can be done on either day 5, day 6, or both", 38, 44, false],
+      [7, "If you train today, make it a 30 min W", 0, 30, false]
+    ] }
+  ];
+  const WHITE_PLAN_WEEKS = 16;
+  const WHITE_PLAN_NOTE = "Daniels' white plan (ch. 8, Table 8.1): 16 weeks of walk/run in minutes, no quality work, " +
+    "strides from Phase IV. Days 1, 3 and 5 are the minimum; a 30-min walk is a fine day 7. Hold each phase four weeks.";
+  const STRIDES_DEF = "ST = strides: light, quick 15- to 20-second runs (not sprints) with 45 to 60 seconds of rest " +
+    "between each (Daniels, ch. 8).";
+  const PLAN_SCOPE_NOTE = "Both plans are written for high school and older; Daniels addresses no one younger. The minutes " +
+    "are his, the distances are this runner's E pace applied to them. A coach's judgment decides how much of a week a child runs.";
+
   class ValueError extends Error {
     constructor(message) { super(message); this.name = "ValueError"; }
   }
@@ -468,6 +548,56 @@
     return { level: next, vdot: vd, time1600: timeFor(YOUTH_1600_M, vd), category: youthCategory(next) };
   }
 
+  // ---- Season-plan helpers (pure; dates are ISO "YYYY-MM-DD" strings, UTC math) ----
+  function eDistanceMiles(vdot, minutes) {
+    // [slow, fast] miles covered in `minutes` of E running at this VDOT's E band.
+    const [, mi] = trainingPaces(vdot)[0];       // E row: [miSlow, miFast] seconds per mile
+    return [minutes * 60.0 / mi[0], minutes * 60.0 / mi[1]];
+  }
+
+  function parseISODate(s) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof s === "string" ? s.trim() : "");
+    if (!m) throw new ValueError("Start date must be YYYY-MM-DD, got " + pyAscii(String(s)));
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+    if (Number.isNaN(d.getTime()) || d.getUTCMonth() !== Number(m[2]) - 1 || d.getUTCDate() !== Number(m[3])) {
+      throw new ValueError("Start date is not a real calendar date: " + s);
+    }
+    return d;
+  }
+
+  function isoDate(d) {
+    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+  }
+
+  function addDays(iso, n) {
+    const d = parseISODate(iso);
+    d.setUTCDate(d.getUTCDate() + n);
+    return isoDate(d);
+  }
+
+  function weekRange(startISO, week) {
+    // Week `week` (1-based) of a plan that starts on startISO: [first day, last day].
+    if (!Number.isInteger(week) || week < 1) throw new ValueError("week must be a positive integer");
+    const first = addDays(startISO, 7 * (week - 1));
+    return [first, addDays(first, 6)];
+  }
+
+  function defaultPreseasonStart(todayISO) {
+    // XC_PRESEASON_WEEKS weeks before the next September 1 that has not yet passed.
+    // From September 1 on, that is next year's season.
+    const d = parseISODate(todayISO);
+    let year = d.getUTCFullYear();
+    if (d.getUTCMonth() >= 8) year += 1;   // month 8 = September
+    return addDays(year + "-09-01", -7 * XC_PRESEASON_WEEKS);
+  }
+
+  function whitePhaseForWeek(week) {
+    if (!Number.isInteger(week) || week < 1 || week > WHITE_PLAN_WEEKS) {
+      throw new ValueError("white plan week must be 1-" + WHITE_PLAN_WEEKS);
+    }
+    return WHITE_PLAN[Math.floor((week - 1) / 4)];
+  }
+
   function renderText(vdot, race) {
     // Same text as the Python render(); race = [dist_m, t_min, dist_label] or null.
     checkRenderable(vdot);
@@ -644,6 +774,41 @@
       rejects(a => youthRow(a, "M"), 5) && rejects(a => youthRow(a, "M"), 19) && rejects(s => youthRow(12, s), "X") &&
       youthRow(18, "F")[5] === 53.6);
     check("youth notes are ASCII", isAscii(YOUTH_QUOTE) && isAscii(YOUTH_PACE_NOTE));
+
+    // Season plans (ch. 14 Table 14.1; ch. 8 Table 8.1)
+    check("preseason: two blocks covering weeks 1-3 and 4-6, three rows each",
+      XC_PRESEASON.length === 2 && XC_PRESEASON[0].weeks[0] === 1 && XC_PRESEASON[0].weeks[1] === 3 &&
+      XC_PRESEASON[1].weeks[0] === 4 && XC_PRESEASON[1].weeks[1] === XC_PRESEASON_WEEKS &&
+      XC_PRESEASON.every(b => b.days.length === 3 && b.days[0][0] === "Sunday" && b.days[0][2] === 60));
+    check("preseason: weekly running minutes 250 then 255 (L at its 60-min cap)",
+      XC_PRESEASON_WEEK_MIN[0] === 250 && XC_PRESEASON_WEEK_MIN[1] === 255);
+    check("white plan: 4 phases x 7 days, weeks 1-16, phases hold 4 weeks each",
+      WHITE_PLAN.length === 4 && WHITE_PLAN.every((p, i) => p.phase === i + 1 && p.days.length === 7 &&
+        p.weeks[0] === 4 * i + 1 && p.weeks[1] === 4 * i + 4) && WHITE_PLAN[3].weeks[1] === WHITE_PLAN_WEEKS);
+    check("white plan: minimum days are 1, 3, 5 in every phase",
+      WHITE_PLAN.every(p => p.days.filter(d => d[4]).map(d => d[0]).join(",") === "1,3,5"));
+    check("white plan: running minutes never exceed total, and no session over 45 min",
+      WHITE_PLAN.every(p => p.days.every(d => d[2] <= d[3] && d[3] <= 45)));
+    check("white plan: Phase I day 1 is 10 running min of 30; Phase IV day 1 is ~38 of ~44 with strides",
+      WHITE_PLAN[0].days[0][2] === 10 && WHITE_PLAN[0].days[0][3] === 30 &&
+      WHITE_PLAN[3].days[0][2] === 38 && WHITE_PLAN[3].days[0][3] === 44 && WHITE_PLAN[3].days[0][1].indexOf("6 ST") > 0);
+    check("white plan: week 1 -> phase 1, week 4 -> 1, week 5 -> 2, week 16 -> 4; weeks 0 and 17 rejected",
+      whitePhaseForWeek(1).phase === 1 && whitePhaseForWeek(4).phase === 1 && whitePhaseForWeek(5).phase === 2 &&
+      whitePhaseForWeek(16).phase === 4 && rejects(whitePhaseForWeek, 0) && rejects(whitePhaseForWeek, 17));
+    const ed = eDistanceMiles(40.0, 30);
+    check("E distance: VDOT 40, 30 min -> about 2.6-3.2 mi, slow < fast",
+      ed[0] < ed[1] && ed[0] > 2.5 && ed[0] < 2.8 && ed[1] > 3.0 && ed[1] < 3.3);
+    check("dates: 6 weeks before Sep 1 is Jul 21; from Sep 1 on it rolls to next year",
+      defaultPreseasonStart("2026-10-30") === "2027-07-21" && defaultPreseasonStart("2027-07-01") === "2027-07-21" &&
+      defaultPreseasonStart("2027-08-31") === "2027-07-21" && defaultPreseasonStart("2027-09-01") === "2028-07-21");
+    check("dates: week ranges and leap-day arithmetic",
+      weekRange("2027-07-21", 1).join(" ") === "2027-07-21 2027-07-27" &&
+      weekRange("2027-07-21", 6).join(" ") === "2027-08-25 2027-08-31" &&
+      addDays("2028-02-28", 1) === "2028-02-29" && addDays("2026-12-31", 1) === "2027-01-01");
+    check("dates: bad input rejected", rejects(parseISODate, "2027-02-30") && rejects(parseISODate, "7/21/2027") &&
+      rejects(parseISODate, "") && rejects(w => weekRange("2027-07-21", w), 0));
+    check("plan notes are ASCII", isAscii(XC_L_RULE) && isAscii(WHITE_PLAN_NOTE) && isAscii(STRIDES_DEF) && isAscii(PLAN_SCOPE_NOTE) &&
+      WHITE_PLAN.every(p => p.days.every(d => isAscii(d[1]))) && XC_PRESEASON.every(b => b.days.every(d => isAscii(d[1]))));
     log(fails === 0 ? "GREEN" : "RED -- " + fails + " failure(s)");
     return fails ? 1 : 0;
   }
@@ -656,7 +821,10 @@
     fmtPace, fmtRace, paceSecs, trainingPaces, isPointValue, eRowExtrapolated, checkRenderable,
     nearestColumn, isExtrapolated, predictions, renderText, selfTest,
     YOUTH_LEVELS, YOUTH_AGE_MIN, YOUTH_AGE_MAX, YOUTH_ADULT_ROW, YOUTH_1600_M, YOUTH_CATEGORIES, YOUTH_QUOTE, YOUTH_PACE_NOTE,
-    youthRow, youthCategory, youthMaxLevel, youthLevel, youthAdultEquivalent, youthNextLevel
+    youthRow, youthCategory, youthMaxLevel, youthLevel, youthAdultEquivalent, youthNextLevel,
+    XC_PRESEASON, XC_PRESEASON_WEEKS, XC_PRESEASON_WEEK_MIN, XC_L_RULE,
+    WHITE_PLAN, WHITE_PLAN_WEEKS, WHITE_PLAN_NOTE, STRIDES_DEF, PLAN_SCOPE_NOTE,
+    eDistanceMiles, parseISODate, isoDate, addDays, weekRange, defaultPreseasonStart, whitePhaseForWeek
   };
 }));
 

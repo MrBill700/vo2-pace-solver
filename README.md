@@ -162,6 +162,29 @@ with Daniels & Gilbert's caveat that a child's computed value underestimates
 true VO2max. The Python CLI has no youth mode, so the CI text diff is
 unaffected.
 
+### Season plans (widget only)
+
+An optional "Season plan" selector prints one of Daniels' off-season blocks
+for the runner whose VDOT was just computed, dated from a start day:
+
+- **Summer preseason** -- ch. 14 Table 14.1, Phase I for cross country, six
+  weeks; the default start is six weeks before the next September 1. Easy
+  running and strides only, with Daniels' L-run cap (the lesser of 60 min and
+  30% of weekly mileage).
+- **Summer preseason for a new or idle runner** -- white plan Phase IV, the
+  route ch. 14 (p. 217) gives runners "who haven't been doing much running
+  lately, or who are relative beginners".
+- **Winter** -- ch. 8 Table 8.1, the 16-week white plan, one four-week phase
+  at a time (walk/run in minutes, no quality work, strides from Phase IV).
+
+The plans stay in the minutes Daniels wrote. The only per-runner arithmetic
+is the E pace from the VDOT, which turns each session's running minutes into
+an expected distance (and a weekly total for the preseason block). The data
+and the date helpers live in `vdot.js` (`XC_PRESEASON`, `WHITE_PLAN`,
+`defaultPreseasonStart`, `weekRange`, `eDistanceMiles`) and are covered by
+the self-test; the Python CLI has none of it, so the CI text diff is still
+unaffected. Both plans are written for high school and older.
+
 ## Method
 
 Velocity v in meters/minute, time t in minutes:
