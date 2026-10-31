@@ -28,16 +28,17 @@
   const YOUTH_PREDICTION_NOTE = "Youth mode lists school race distances only (2k through 2 miles in middle school, 5k in high school): " +
     "Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
   // Season plans: the off-season blocks a school coach fills in around the racing season.
+  // Season-plan companion: dates and this runner's distances for a Daniels block; the
+  // workouts are read from the book (they are not reproduced on a public page).
   const PLAN_OPTIONS = [
     ["", "None"],
     ["preseason", "Summer preseason: 6 weeks before Sep 1 (Daniels ch. 14, Table 14.1)"],
     ["preseason-new", "Summer preseason for a new or idle runner (white plan Phase IV, per ch. 14 p. 217)"],
     ["white", "Winter: the white plan, 16 weeks (Daniels ch. 8, Table 8.1)"]
   ];
-  const PRESEASON_NEW_NOTE = "Daniels, ch. 14 (p. 217): runners who haven't been doing much running lately, or who are relative " +
-    "beginners, should take Phase IV of the white plan as their preseason instead of Table 14.1. Repeat the week for the six weeks.";
+  const PLAN_BOOK_NOTE = "Open the book to the table named above for the workouts; this card gives the calendar and " +
+    "what each session length is in distance for this runner.";
   const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const MIN_DAY_LABEL = "minimum day";
 
   function el(tag, attrs, children) {
     const node = document.createElement(tag);
@@ -119,7 +120,7 @@
       form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
       form.appendChild(youthGrid);
     }
-    if (Array.isArray(V.WHITE_PLAN) && typeof V.weekRange === "function") {
+    if (typeof V.planDistanceTable === "function" && typeof V.weekRange === "function") {
       form.appendChild(el("div", { class: "pw-grid pw-plan-row" }, [el("label", null, ["Season plan (optional)", planSel])]));
       form.appendChild(planGrid);
     }
@@ -175,23 +176,23 @@
       V.fmtPace(km[0]) + "-" + V.fmtPace(km[1]) + " /km, " + fmtMph(mi[0]) + "-" + fmtMph(mi[1]) + " mph" + flag + ".";
   }
 
-  function whiteTable(vdot, phaseObj) {
+  function distanceTable(vdot) {
     const t = el("table");
     t.appendChild(el("thead", null, [el("tr", null, [
-      el("th", { text: "Day" }), el("th", { text: "Workout" }), el("th", { text: "Run min" }), el("th", { text: "Total" }), el("th", { text: "Est. distance" })
+      el("th", { text: "Session length" }), el("th", { text: "Distance at this runner's E pace" })
     ])]));
     const body = el("tbody");
-    for (const [day, workout, runMin, totalMin, minimum] of phaseObj.days) {
-      const w = el("td", { text: workout });
-      if (minimum) w.appendChild(el("span", { class: "flag", text: MIN_DAY_LABEL }));
-      body.appendChild(el("tr", { class: minimum ? "min" : "" }, [
-        el("td", { class: "num", text: String(day) }), w,
-        el("td", { class: "num", text: String(runMin) }), el("td", { class: "num", text: String(totalMin) }),
-        el("td", { class: "num", text: fmtMiles(vdot, runMin) })
-      ]));
+    for (const [minutes] of V.planDistanceTable(vdot)) {
+      body.appendChild(el("tr", null, [el("td", { text: minutes + " min of E running" }), el("td", { class: "num", text: fmtMiles(vdot, minutes) })]));
     }
     t.appendChild(body);
     return t;
+  }
+
+  function weekList(startISO, w1, w2) {
+    const weeks = [];
+    for (let w = w1; w <= w2; w++) weeks.push("wk " + w + ": " + fmtSpan(startISO, w, w));
+    return weeks.join("; ") + ".";
   }
 
   function renderPlan(vdot, plan) {
@@ -199,47 +200,34 @@
     if (plan.kind === "preseason") {
       card.appendChild(el("h2", { text: "Summer preseason: " + V.XC_PRESEASON_WEEKS + " weeks, " +
         fmtSpan(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
+      card.appendChild(el("p", { class: "pw-sub", text: V.XC_PRESEASON_REF + "." }));
+      card.appendChild(el("p", { class: "pw-youth-note", text: "Weeks 1-3: " + fmtSpan(plan.start, 1, 3) + ". Weeks 4-6: " +
+        fmtSpan(plan.start, 4, 6) + ". " + weekList(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
       card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
-      V.XC_PRESEASON.forEach((block, i) => {
-        const [w1, w2] = block.weeks;
-        card.appendChild(el("h3", { text: "Weeks " + w1 + "-" + w2 + ": " + fmtSpan(plan.start, w1, w2) }));
-        const t = el("table");
-        t.appendChild(el("thead", null, [el("tr", null, [
-          el("th", { text: "Day" }), el("th", { text: "Workout" }), el("th", { text: "Est. distance" })
-        ])]));
-        const body = el("tbody");
-        for (const [days, workout, minutes] of block.days) {
-          body.appendChild(el("tr", null, [el("td", { text: days }), el("td", { text: workout }), el("td", { class: "num", text: fmtMiles(vdot, minutes) })]));
-        }
-        t.appendChild(body);
-        card.appendChild(t);
-        card.appendChild(el("p", { class: "pw-foot", text: "All seven days at this E pace, L run at its 60-min cap: about " +
-          fmtMiles(vdot, V.XC_PRESEASON_WEEK_MIN[i]) + " a week." }));
-      });
+      card.appendChild(distanceTable(vdot));
       card.appendChild(el("p", { class: "pw-foot", text: V.XC_L_RULE + " " + V.STRIDES_DEF }));
-      card.appendChild(el("p", { class: "pw-foot", text: "Table 14.1 can be shortened if six weeks are not available; " +
-        "a relative beginner should use it for at least three or four weeks, or take the white-plan Phase IV option instead." }));
+      card.appendChild(el("p", { class: "pw-foot", text: "Daniels: the table can be shortened if six weeks are not available, " +
+        "but a relative beginner should use it for at least three or four weeks, or take the white-plan Phase IV option instead." }));
     } else if (plan.kind === "preseason-new") {
-      const ph = V.WHITE_PLAN[3];
-      card.appendChild(el("h2", { text: "Summer preseason, new or idle runner: white plan Phase 4, " +
+      card.appendChild(el("h2", { text: "Summer preseason, new or idle runner: white plan Phase IV, " +
         fmtSpan(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
+      card.appendChild(el("p", { class: "pw-sub", text: V.WHITE_PLAN_REF + ", Phase IV (weeks 13-16 of the plan), repeated for the six weeks." }));
+      card.appendChild(el("p", { class: "pw-youth-note", text: V.WHITE_PHASE_IV_NOTE + " " + weekList(plan.start, 1, V.XC_PRESEASON_WEEKS) }));
       card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
-      card.appendChild(el("p", { class: "pw-youth-note", text: PRESEASON_NEW_NOTE }));
-      card.appendChild(whiteTable(vdot, ph));
-      card.appendChild(el("p", { class: "pw-foot", text: V.STRIDES_DEF + " Running minutes exclude walking; Phase 4 minutes are the book's approximate values." }));
+      card.appendChild(distanceTable(vdot));
+      card.appendChild(el("p", { class: "pw-foot", text: V.STRIDES_DEF + " Running minutes exclude walking." }));
     } else {
-      const ph = V.WHITE_PLAN[plan.phase - 1];
+      const ph = V.whitePhaseForWeek(V.WHITE_PHASE_WEEKS * (plan.phase - 1) + 1);
       const [w1, w2] = ph.weeks;
       card.appendChild(el("h2", { text: "Winter: white plan Phase " + ph.phase + ", weeks " + w1 + "-" + w2 + ", " + fmtSpan(plan.start, w1, w2) }));
+      card.appendChild(el("p", { class: "pw-sub", text: V.WHITE_PLAN_REF + ", Phase " + ph.phase + "." }));
+      card.appendChild(el("p", { class: "pw-youth-note", text: "Repeat the phase's week four times. " + weekList(plan.start, w1, w2) }));
       card.appendChild(el("p", { class: "pw-sub", text: ePaceLine(vdot) }));
-      const weeks = [];
-      for (let w = w1; w <= w2; w++) weeks.push("wk " + w + ": " + fmtSpan(plan.start, w, w));
-      card.appendChild(el("p", { class: "pw-youth-note", text: "Repeat this week four times. " + weeks.join("; ") + "." }));
-      card.appendChild(whiteTable(vdot, ph));
+      card.appendChild(distanceTable(vdot));
       card.appendChild(el("p", { class: "pw-foot", text: V.WHITE_PLAN_NOTE + (ph.phase === 4 ? " " + V.STRIDES_DEF : "") +
         " Running minutes exclude walking." }));
     }
-    card.appendChild(el("p", { class: "pw-foot", text: V.PLAN_SCOPE_NOTE }));
+    card.appendChild(el("p", { class: "pw-foot", text: PLAN_BOOK_NOTE + " " + V.PLAN_SCOPE_NOTE }));
     return card;
   }
 

@@ -162,28 +162,31 @@ with Daniels & Gilbert's caveat that a child's computed value underestimates
 true VO2max. The Python CLI has no youth mode, so the CI text diff is
 unaffected.
 
-### Season plans (widget only)
+### Season-plan companion (widget only)
 
-An optional "Season plan" selector prints one of Daniels' off-season blocks
-for the runner whose VDOT was just computed, dated from a start day:
+An optional "Season plan" selector dates one of Daniels' off-season blocks
+for the runner whose VDOT was just computed and converts its session lengths
+to that runner's distances. The workouts themselves are **not** reproduced
+(they are the book's expression, and this repository is public); the card
+names the table and page and the coach reads the week from the book.
 
 - **Summer preseason** -- ch. 14 Table 14.1, Phase I for cross country, six
-  weeks; the default start is six weeks before the next September 1. Easy
-  running and strides only, with Daniels' L-run cap (the lesser of 60 min and
-  30% of weekly mileage).
+  weeks; the default start is six weeks before the next September 1. The
+  card carries Daniels' L-run cap (the lesser of 60 min and 30% of weekly
+  mileage) and his strides definition, both of which are rules, not tables.
 - **Summer preseason for a new or idle runner** -- white plan Phase IV, the
   route ch. 14 (p. 217) gives runners "who haven't been doing much running
   lately, or who are relative beginners".
 - **Winter** -- ch. 8 Table 8.1, the 16-week white plan, one four-week phase
-  at a time (walk/run in minutes, no quality work, strides from Phase IV).
+  at a time.
 
-The plans stay in the minutes Daniels wrote. The only per-runner arithmetic
-is the E pace from the VDOT, which turns each session's running minutes into
-an expected distance (and a weekly total for the preseason block). The data
-and the date helpers live in `vdot.js` (`XC_PRESEASON`, `WHITE_PLAN`,
-`defaultPreseasonStart`, `weekRange`, `eDistanceMiles`) and are covered by
-the self-test; the Python CLI has none of it, so the CI text diff is still
-unaffected. Both plans are written for high school and older.
+Each card prints the week dates, the runner's E pace, and a table of what
+10, 20, 30, 40, 45 and 60 minutes of easy running come to at that pace. The
+date helpers and the conversion live in `vdot.js` (`defaultPreseasonStart`,
+`weekRange`, `whitePhaseForWeek`, `planDistanceTable`) and are covered by the
+self-test, which also asserts that no workout text is stored; the Python CLI
+has none of it, so the CI text diff is unaffected. Both plans are written for
+high school and older.
 
 ## Method
 
