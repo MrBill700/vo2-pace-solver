@@ -1,6 +1,6 @@
-## 2026-11-06 session close
-- Done: Reviewed eight tracked files at 717206a; filed issues #2-#7; changed no source files.
-- Verified: Python and JavaScript self-tests GREEN; widget syntax PASS; CI parity 9/9 plus 221 deterministic and 1000 randomized cases; GitHub Actions run 41159067535 succeeded.
-- Open: Issues #2-#7 await fixes; no background work; HANDOFF.md is uncommitted.
-- Next: To resume fixes, start with issue #2 and add direct-VDOT plus race-mode regression tests; done when both suites and CI pass.
-- Watch: Issue #3 can false-green future parity runs until fixed; no time-bound events.
+## 2026-11-06 session close (Kimi review fixes)
+- Done: All six review issues closed. #3 2b1e152 (parity script fails when either side fails), #5 2b1e152 (youth level/category/next agree), #2 267372f (not a bug: youth keeps the 25-85 guard, no extrapolation; comment above checkRenderable), #4 630d97e (missing/stale vdot.js shows the startup fallback), #7 b3387fb (cleanup), #6 69a5ada (dates keep their century).
+- Verified: Python and JS self-tests GREEN; tools/widget-startup-test.js 8/8; tools/parity.sh 9/9; GitHub Actions run 42314846353 succeeded; Chrome check of race, youth, plan and fallback flows on the served page.
+- Open: no open issues; no background work.
+- Next: none required. Bump the ?v= cache-bust in web/index.html whenever vdot.js or widget.js changes.
+- Watch: nothing time-bound.
