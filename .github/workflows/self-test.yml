@@ -19,6 +19,8 @@ jobs:
           node-version: '20'
       - name: Run the browser port's self-test
         run: node web/vdot.js --self-test
+      - name: Widget starts or shows its fallback with a missing or stale vdot.js
+        run: node tools/widget-startup-test.js
       - name: Cross-check the browser port against the Python CLI
         run: bash tools/parity.sh
       - name: Parity check fails when either side fails

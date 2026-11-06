@@ -128,7 +128,10 @@ that already carries the required attribution and caveat text.
   http://localhost:8000/.
 - Test it: `node web/vdot.js --self-test` mirrors the Python self-test, and
   `node web/vdot.js --dist 5k --time 22:30` prints the same text as the Python
-  CLI, so the two can be diffed (CI does exactly that).
+  CLI, so the two can be diffed (CI does exactly that, via `tools/parity.sh`).
+  `node tools/widget-startup-test.js` checks that the widget starts normally and
+  falls back to a "could not start" message, not a blank page, when `vdot.js` is
+  missing or stale.
 - Embed it: give a page a `<div id="pace-widget"></div>`, then load `vdot.js`
   and `widget.js` in that order. Keep the two disclaimer paragraphs and the
   repo link from `index.html` next to it.

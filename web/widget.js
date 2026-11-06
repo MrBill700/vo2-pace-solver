@@ -13,18 +13,33 @@
     ["5k", "5k"], ["10k", "10k"], ["15k", "15k"], ["10mi", "10 miles"],
     ["half", "Half marathon"], ["marathon", "Marathon"]
   ];
-  const E_EXTRAPOLATION_LABEL = "extrapolation " + EM_DASH + " Daniels publishes no easy pace below VDOT " +
-    V.pyFixed(V.E_PACE_MIN_VDOT, 0);
+  // What this widget needs from vdot.js. A missing or stale vdot.js fails the core check
+  // in init(), which shows the startup fallback instead of a blank page; a vdot.js that
+  // lacks only the youth or plan API hides that feature.
+  const CORE_API = ["ValueError", "pyFixed", "pyStrip", "pyFloat", "pyAscii", "isAscii", "checkRenderable",
+    "parseDist", "parseTime", "vdotFromRace", "fmtPace", "fmtRace", "isPointValue", "trainingPaces",
+    "predictions", "eRowExtrapolated", "isExtrapolated", "nearestColumn", "timeFor", "MILE_M",
+    "E_PACE_MIN_VDOT", "CAVEATS", "BAND_NOTES"];
+  const YOUTH_API = ["youthLevel", "youthRow", "youthAdultEquivalent", "youthNextLevel", "YOUTH_AGE_MIN",
+    "YOUTH_AGE_MAX", "YOUTH_1600_M", "YOUTH_ADULT_ROW", "YOUTH_QUOTE", "YOUTH_PACE_NOTE"];
+  const PLAN_API = ["planDistanceTable", "weekRange", "defaultPreseasonStart", "parseISODate", "eDistanceMiles",
+    "whitePhaseForWeek", "WHITE_PHASE_IV_NOTE", "WHITE_PHASE_WEEKS", "WHITE_PLAN_NOTE", "WHITE_PLAN_REF",
+    "XC_L_RULE", "XC_PRESEASON_REF", "XC_PRESEASON_WEEKS", "PLAN_SCOPE_NOTE", "STRIDES_DEF"];
+  function missingApi(names) { return names.filter(n => V[n] === undefined); }
+  // Built in init(), after the core check, because they read vdot.js values.
+  let E_EXTRAPOLATION_LABEL, YOUTH_DISTANCES;
   const PREDICTION_EXTRAPOLATION_LABEL = "extrapolation (assumes training at that distance)";
   const VDOT_MODE_NOTE = "No reference race " + EM_DASH + " every prediction assumes training at that distance.";
   // Youth mode lists the distances school runners actually race: 1,500/1,600/mile and
   // 2k-2 miles in middle school, 5k in high school. Nothing longer: Daniels' youth table
   // is built on 1,600 m and the book rates no child at road distances. Each row carries
-  // the column of its nearest named distance for the extrapolation flag.
-  const YOUTH_DISTANCES = [
-    ["1500 m", 1500.0], ["1600 m", 1600.0], ["Mile", V.MILE_M], ["2000 m", 2000.0],
-    ["3000 m", 3000.0], ["2 miles", 2 * V.MILE_M], ["5k", 5000.0]
-  ];
+  // the column of its nearest named distance for the extrapolation flag (built in init()).
+  function youthDistances() {
+    return [
+      ["1500 m", 1500.0], ["1600 m", 1600.0], ["Mile", V.MILE_M], ["2000 m", 2000.0],
+      ["3000 m", 3000.0], ["2 miles", 2 * V.MILE_M], ["5k", 5000.0]
+    ];
+  }
   const YOUTH_PREDICTION_NOTE = "Youth mode lists school race distances only (2k through 2 miles in middle school, 5k in high school): " +
     "Daniels' Table 5.5 is built on 1,600 m times and the book gives no youth values for longer races.";
   // Season plans: the off-season blocks a school coach fills in around the racing season.
@@ -116,11 +131,11 @@
     form.appendChild(vdotGrid);
     // A stale cached vdot.js without the youth API would leave the age list empty; hide
     // the toggle instead of offering a form that cannot compute.
-    if (typeof V.youthLevel === "function" && Number.isInteger(V.YOUTH_AGE_MIN)) {
+    if (missingApi(YOUTH_API).length === 0 && Number.isInteger(V.YOUTH_AGE_MIN)) {
       form.appendChild(el("div", { class: "pw-youth-row" }, [youthLabel]));
       form.appendChild(youthGrid);
     }
-    if (typeof V.planDistanceTable === "function" && typeof V.weekRange === "function") {
+    if (missingApi(PLAN_API).length === 0) {
       form.appendChild(el("div", { class: "pw-grid pw-plan-row" }, [el("label", null, ["Season plan (optional)", planSel])]));
       form.appendChild(planGrid);
     }
@@ -255,7 +270,9 @@
       card.appendChild(el("div", { class: "pw-level", text: "Level " + lvl + " of 10 " + EM_DASH + " " + r.category }));
       card.appendChild(el("p", { class: "pw-sub", text: "for a " + youthWho(youth) + ", on a 10-level scale where age " +
         V.YOUTH_ADULT_ROW + "-38 is the reference band. Whole levels are the published rows; the decimal is interpolated." }));
-      const adultF = V.youthAdultEquivalent(r.rawLevel, "F"), adultM = V.youthAdultEquivalent(r.rawLevel, "M");
+      // A vdot.js older than rawLevel returns the unrounded value as `level`.
+      const raw = r.rawLevel !== undefined ? r.rawLevel : r.level;
+      const adultF = V.youthAdultEquivalent(raw, "F"), adultM = V.youthAdultEquivalent(raw, "M");
       card.appendChild(el("p", { class: "pw-foot", text: "Same level as an adult (18-38) woman at VDOT " + V.pyFixed(adultF, 1) +
         " (1,600 m in " + fmt1600(adultF) + ") or man at VDOT " + V.pyFixed(adultM, 1) + " (" + fmt1600(adultM) + ")." }));
       const next = V.youthNextLevel(r.level, youth.age, youth.sex);
@@ -443,7 +460,13 @@
 
   function init() {
     const root = document.getElementById("pace-widget");
-    if (!root || !V) return;
+    if (!root) return;
+    if (!V) throw new Error("vdot.js did not load");
+    const missing = missingApi(CORE_API);
+    if (missing.length) throw new Error("vdot.js is missing " + missing.join(", "));
+    E_EXTRAPOLATION_LABEL = "extrapolation " + EM_DASH + " Daniels publishes no easy pace below VDOT " +
+      V.pyFixed(V.E_PACE_MIN_VDOT, 0);
+    YOUTH_DISTANCES = youthDistances();
     const ui = buildForm(root);
     ui.form.addEventListener("change", function (ev) {
       if (ev.target.name === "pw-mode") {
@@ -482,6 +505,6 @@
 
   try { init(); } catch (e) {
     const root = document.getElementById("pace-widget");
-    if (root) root.textContent = "The calculator could not start in this browser.";
+    if (root) root.textContent = "The calculator could not start. Reload the page; if it still fails, try another browser.";
   }
 })();
