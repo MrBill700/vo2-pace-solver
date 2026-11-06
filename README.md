@@ -160,8 +160,8 @@ woman at 5:26 or man at 4:55).
 Four things it deliberately does not do: it never extrapolates above the top
 level the book prints for an age (Daniels stops the younger rows early "to
 avoid encouraging very young runners to work too hard"); it rejects a VDOT
-below 25 even though Table 5.5 prints levels down to 16.1, because the pace
-solver is verified only from 25 to 85 and the tool does not extrapolate; it lists equivalent
+below 25: Table 5.5 lists youth level cutoffs that low, but the book gives no
+paces below VDOT 30 and this tool's pace math is verified only from 25 to 85; it lists equivalent
 times only at school race distances (1,500 m, 1,600 m, mile, 2,000 m, 3,000 m,
 2 miles, 5k), nothing longer, since the youth table is built on 1,600 m; and it adds
 no youth-specific training paces, because the book has none. The E/M/T/I/R
