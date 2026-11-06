@@ -134,7 +134,10 @@ that already carries the required attribution and caveat text.
   missing or stale.
 - Embed it: give a page a `<div id="pace-widget"></div>`, then load `vdot.js`
   and `widget.js` in that order. Keep the two disclaimer paragraphs and the
-  repo link from `index.html` next to it.
+  repo link from `index.html` next to it. When either script changes, bump the
+  `?v=` value on both script tags in `index.html` so browsers drop cached
+  copies (a stale `vdot.js` either shows the "could not start" message or
+  hides the youth and season-plan options it lacks).
 - Nothing the visitor types leaves the page: no storage, no network use.
 
 The widget adds two presentation rules the CLI does not have: an equivalent
@@ -154,9 +157,11 @@ middle-school practice sessions. The table is transcribed into `vdot.js`
 example (a 10-year-old girl at 7:18 is level 6, the same level as an adult
 woman at 5:26 or man at 4:55).
 
-Three things it deliberately does not do: it never extrapolates above the top
+Four things it deliberately does not do: it never extrapolates above the top
 level the book prints for an age (Daniels stops the younger rows early "to
-avoid encouraging very young runners to work too hard"); it lists equivalent
+avoid encouraging very young runners to work too hard"); it rejects a VDOT
+below 25 even though Table 5.5 prints levels down to 16.1, because the pace
+solver is verified only from 25 to 85 and the tool does not extrapolate; it lists equivalent
 times only at school race distances (1,500 m, 1,600 m, mile, 2,000 m, 3,000 m,
 2 miles, 5k), nothing longer, since the youth table is built on 1,600 m; and it adds
 no youth-specific training paces, because the book has none. The E/M/T/I/R
