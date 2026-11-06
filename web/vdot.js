@@ -514,15 +514,20 @@
   function parseISODate(s) {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(typeof s === "string" ? s.trim() : "");
     if (!m) throw new ValueError("Start date must be YYYY-MM-DD, got " + pyAscii(String(s)));
-    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
-    if (Number.isNaN(d.getTime()) || d.getUTCMonth() !== Number(m[2]) - 1 || d.getUTCDate() !== Number(m[3])) {
+    // setUTCFullYear, not Date.UTC: Date.UTC maps years 0-99 to 1900-1999 (issue #6).
+    const y = Number(m[1]), mo = Number(m[2]) - 1, day = Number(m[3]);
+    const d = new Date(0);
+    d.setUTCFullYear(y, mo, day);
+    if (Number.isNaN(d.getTime()) || d.getUTCFullYear() !== y || d.getUTCMonth() !== mo || d.getUTCDate() !== day) {
       throw new ValueError("Start date is not a real calendar date: " + s);
     }
     return d;
   }
 
   function isoDate(d) {
-    return d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
+    const y = d.getUTCFullYear();
+    if (!(y >= 0 && y <= 9999)) throw new ValueError("Date falls outside years 0000-9999");
+    return String(y).padStart(4, "0") + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate());
   }
 
   function addDays(iso, n) {
@@ -788,6 +793,14 @@
       weekRange("2027-07-21", 1).join(" ") === "2027-07-21 2027-07-27" &&
       weekRange("2027-07-21", 6).join(" ") === "2027-08-25 2027-08-31" &&
       addDays("2028-02-28", 1) === "2028-02-29" && addDays("2026-12-31", 1) === "2027-01-01");
+    // Issue #6: four-digit years keep their century (Date.UTC would turn 0099 into 1999).
+    check("dates: years 0000, 0099, 0100 keep their century",
+      addDays("0099-01-01", 1) === "0099-01-02" && addDays("0000-01-01", 1) === "0000-01-02" &&
+      addDays("0100-01-01", 1) === "0100-01-02" && addDays("0099-12-31", 1) === "0100-01-01" &&
+      isoDate(parseISODate("0099-06-15")) === "0099-06-15");
+    check("dates: results outside 0000-9999 are rejected, not mangled",
+      rejects(d => addDays(d, -1), "0000-01-01") && rejects(d => addDays(d, 1), "9999-12-31") &&
+      addDays("9999-12-30", 1) === "9999-12-31");
     check("dates: bad input rejected", rejects(parseISODate, "2027-02-30") && rejects(parseISODate, "7/21/2027") &&
       rejects(parseISODate, "") && rejects(w => weekRange("2027-07-21", w), 0));
     check("plan notes are ASCII", [XC_PRESEASON_REF, XC_L_RULE, WHITE_PLAN_REF, WHITE_PLAN_NOTE, WHITE_PHASE_IV_NOTE, STRIDES_DEF,
