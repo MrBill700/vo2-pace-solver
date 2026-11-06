@@ -78,5 +78,20 @@ check("vdot.js without whitePhaseForWeek: starts, plan picker hidden", () => {
   return !FALLBACK.test(root.textContent) && has(root, "pw-youth-row") && !has(root, "pw-grid pw-plan-row");
 });
 
+// Issue #7: the distance select is built from V.DISTANCES, so each option's column and
+// meters must match DISTANCES, in order, with only "custom" added at the end.
+const find = (node, pred) => pred(node) ? node : (node.children || []).reduce((hit, c) => hit || find(c, pred), null);
+check("distance options match V.DISTANCES column by column", () => {
+  const select = find(start(REAL), n => n.attrs && n.attrs.id === "pw-dist");
+  const opts = select.children.filter(o => o.attrs.value !== "custom");
+  return opts.length === REAL.DISTANCES.length && select.children[select.children.length - 1].attrs.value === "custom" &&
+    opts.every((o, i) => o.attrs["data-column"] === String(i) &&
+      Math.abs(REAL.parseDist(o.attrs.value) - REAL.DISTANCES[i][1]) < 1e-9);
+});
+check("a DISTANCES entry with no label shows the fallback", () => {
+  const v = Object.assign({}, REAL, { DISTANCES: REAL.DISTANCES.concat([["50k", 50000.0]]) });
+  return FALLBACK.test(start(v).textContent);
+});
+
 console.log(failed ? failed + " startup check(s) FAILED" : "all startup checks passed");
 process.exit(failed ? 1 : 0);

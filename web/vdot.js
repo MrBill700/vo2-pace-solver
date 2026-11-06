@@ -488,7 +488,8 @@
     const row = youthRow(YOUTH_ADULT_ROW, sex);
     if (!(1 <= level && level <= 10)) throw new ValueError("level must be 1-10, got " + String(level));
     const i = Math.min(Math.floor(level), 9);
-    if (i === 10 || level === i) return row[i - 1];
+    if (level === 10) return row[9];  // i is capped at 9, so the top level is exact here
+    if (level === i) return row[i - 1];
     return row[i - 1] + (level - i) * (row[i] - row[i - 1]);
   }
 
@@ -704,6 +705,10 @@
       Math.abs(secs(youthAdultEquivalent(6, "F")) - 326) < 2 && Math.abs(secs(youthAdultEquivalent(6, "M")) - 295) < 2);
     check("adult equivalent interpolates (level 6.5 F between 53.6 and 58.1)",
       Math.abs(youthAdultEquivalent(6.5, "F") - 55.85) < 1e-9 && youthAdultEquivalent(10, "M") === 80.0);
+    check("adult equivalent at level 10 is the printed top cell for both sexes; 9.5 interpolates",
+      youthAdultEquivalent(10, "F") === youthRow(YOUTH_ADULT_ROW, "F")[9] &&
+      youthAdultEquivalent(10, "M") === youthRow(YOUTH_ADULT_ROW, "M")[9] &&
+      Math.abs(youthAdultEquivalent(9.5, "M") - (youthRow(YOUTH_ADULT_ROW, "M")[8] + youthRow(YOUTH_ADULT_ROW, "M")[9]) / 2) < 1e-9);
     let exact = true, mono = true;
     const ages = Object.keys(YOUTH_LEVELS).map(Number).sort((a, b) => a - b);
     for (const age of ages) {

@@ -7,19 +7,25 @@
   const V = window.VDOT;
   const EM_DASH = String.fromCharCode(0x2014);
 
-  // Select rows, in DISTANCES order so the option index is the column index.
-  const NAMED = [
-    ["1500m", "1500 m"], ["mile", "Mile"], ["3000m", "3000 m"], ["2mi", "2 miles"],
-    ["5k", "5k"], ["10k", "10k"], ["15k", "15k"], ["10mi", "10 miles"],
-    ["half", "Half marathon"], ["marathon", "Marathon"]
-  ];
+  // Option value and label for each V.DISTANCES name. The select and the prediction rows
+  // are built by walking V.DISTANCES, so order and columns cannot drift; a distance with
+  // no entry here stops startup (fallback message) instead of mislabelling a row.
+  const DIST_OPTIONS = {
+    "1500m": ["1500m", "1500 m"], "mile": ["mile", "Mile"], "3000m": ["3000m", "3000 m"],
+    "2mi": ["2mi", "2 miles"], "5000m": ["5k", "5k"], "10000m": ["10k", "10k"], "15k": ["15k", "15k"],
+    "10mi": ["10mi", "10 miles"], "half": ["half", "Half marathon"], "marathon": ["marathon", "Marathon"]
+  };
+  function distOption(name) {
+    if (!Object.prototype.hasOwnProperty.call(DIST_OPTIONS, name)) throw new Error("no label for distance " + name);
+    return DIST_OPTIONS[name];
+  }
   // What this widget needs from vdot.js. A missing or stale vdot.js fails the core check
   // in init(), which shows the startup fallback instead of a blank page; a vdot.js that
   // lacks only the youth or plan API hides that feature.
   const CORE_API = ["ValueError", "pyFixed", "pyStrip", "pyFloat", "pyAscii", "isAscii", "checkRenderable",
     "parseDist", "parseTime", "vdotFromRace", "fmtPace", "fmtRace", "isPointValue", "trainingPaces",
     "predictions", "eRowExtrapolated", "isExtrapolated", "nearestColumn", "timeFor", "MILE_M",
-    "E_PACE_MIN_VDOT", "CAVEATS", "BAND_NOTES"];
+    "E_PACE_MIN_VDOT", "CAVEATS", "BAND_NOTES", "DISTANCES"];
   const YOUTH_API = ["youthLevel", "youthRow", "youthAdultEquivalent", "youthNextLevel", "YOUTH_AGE_MIN",
     "YOUTH_AGE_MAX", "YOUTH_1600_M", "YOUTH_ADULT_ROW", "YOUTH_QUOTE", "YOUTH_PACE_NOTE"];
   const PLAN_API = ["planDistanceTable", "weekRange", "defaultPreseasonStart", "parseISODate", "eDistanceMiles",
@@ -76,7 +82,10 @@
       el("label", null, [el("input", { type: "radio", name: "pw-mode", value: "vdot" }), " a VDOT"])
     ]);
     const select = el("select", { id: "pw-dist" });
-    NAMED.forEach(([value, label], i) => select.appendChild(el("option", { value: value, text: label, "data-column": String(i) })));
+    V.DISTANCES.forEach(([name], i) => {
+      const [value, label] = distOption(name);
+      select.appendChild(el("option", { value: value, text: label, "data-column": String(i) }));
+    });
     select.appendChild(el("option", { value: "custom", text: "Custom..." }));
     // Custom distance: no inputmode, since iOS's decimal keypad has no letters for "8k".
     // Time: the numeric keypad on purpose (phones open straight to digits); it has no
@@ -177,9 +186,8 @@
     return fmtDay(a) + " - " + fmtDay(b);
   }
 
-  function fmtMiles(vdot, minutes) {
+  function fmtMiles(minutes, lo, hi) {
     if (minutes <= 0) return "walk";
-    const [lo, hi] = V.eDistanceMiles(vdot, minutes);
     const a = V.pyFixed(lo, 1), b = V.pyFixed(hi, 1);
     return (a === b ? a : a + "-" + b) + " mi";
   }
@@ -197,8 +205,8 @@
       el("th", { text: "Session length" }), el("th", { text: "Distance at this runner's E pace" })
     ])]));
     const body = el("tbody");
-    for (const [minutes] of V.planDistanceTable(vdot)) {
-      body.appendChild(el("tr", null, [el("td", { text: minutes + " min of E running" }), el("td", { class: "num", text: fmtMiles(vdot, minutes) })]));
+    for (const [minutes, [lo, hi]] of V.planDistanceTable(vdot)) {
+      body.appendChild(el("tr", null, [el("td", { text: minutes + " min of E running" }), el("td", { class: "num", text: fmtMiles(minutes, lo, hi) })]));
     }
     t.appendChild(body);
     return t;
@@ -415,7 +423,7 @@
           label: label, text: V.fmtRace(V.timeFor(d, vdot)),
           extrapolated: column === null ? false : V.isExtrapolated(column, V.nearestColumn(d))
         }))
-      : V.predictions(vdot, column).map(p => ({ label: NAMED[p.column][1], text: p.text, extrapolated: p.extrapolated }));
+      : V.predictions(vdot, column).map(p => ({ label: distOption(p.name)[1], text: p.text, extrapolated: p.extrapolated }));
     for (const p of rows) {
       const time = el("td", { class: "num" }, [el("span", { text: p.text })]);
       if (p.extrapolated) time.appendChild(el("span", { class: "flag", text: PREDICTION_EXTRAPOLATION_LABEL }));
