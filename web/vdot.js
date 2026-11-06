@@ -401,6 +401,9 @@
 
   function eRowExtrapolated(vdot) { return vdot < E_PACE_MIN_VDOT; }
 
+  // Not a bug: youth mode deliberately keeps this 25-85 guard. Table 5.5 prints youth
+  // levels down to VDOT 16.1, but the pace solver is unverified below 25 and the tool
+  // does not extrapolate, so a youth VDOT under 25 is rejected (ruled 2026-11-06, issue #2).
   function checkRenderable(vdot) {
     if (!(25 <= vdot && vdot <= 85)) {
       throw new ValueError("VDOT " + String(vdot) + " is outside 25-85; this tool's solver is only verified in that range");
