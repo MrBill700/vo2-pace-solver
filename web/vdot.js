@@ -473,7 +473,11 @@
     // a hair under the printed 38.6, and must read as level 6, not 5.9996).
     const whole = Math.round(level);
     if (Math.abs(level - whole) < 0.005) level = whole;
-    return Object.assign(base, { status: "within", level: level, category: youthCategory(level) });
+    // `level` is the one-decimal value the card shows; category and next level follow it,
+    // so 5.96 reads "Level 6, Good" and never "6.0, Intermediate, next 6". `rawLevel`
+    // keeps the unrounded value for the adult equivalent.
+    const shown = Number(pyFixed(level, 1));
+    return Object.assign(base, { status: "within", level: shown, rawLevel: level, category: youthCategory(shown) });
   }
 
   // The VDOT an adult (18-38) of the given sex needs for the same (fractional) level.
@@ -722,6 +726,32 @@
     const nx = youthNextLevel(5.4, 12, "M");
     check("next level: 12-year-old boy at 5.4 -> level 6, VDOT 45.8, 1600 ~6:16",
       nx.level === 6 && nx.vdot === 45.8 && Math.abs(nx.time1600 * 60 - 376) < 2 && nx.category === "Good");
+    // Shown level, category and next level agree (issue #5): 17-year-old boy at VDOT 57.8
+    // solves to 5.959 and must read "6, Good, next 7", not "6.0, Intermediate, next 6".
+    const b17 = youthLevel(57.8, 17, "M");
+    check("issue #5: 17M at VDOT 57.8 shows level 6, Good, next 7",
+      b17.level === 6 && b17.category === "Good" && youthNextLevel(b17.level, 17, "M").level === 7 &&
+      Math.abs(b17.rawLevel - 5.959183673469387) < 1e-12);
+    const atRaw = (raw, age, sex) => {   // VDOT that interpolates to fractional level `raw`
+      const row = YOUTH_LEVELS[age][sex], i = Math.floor(raw);
+      return row[i - 1] + (raw - i) * (row[i] - row[i - 1]);
+    };
+    let agree = true;
+    for (const L of [2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+      for (const [raw, shown] of [[L - 0.06, L - 0.1], [L - 0.04, L], [L + 0.04, L]]) {
+        if (raw > youthMaxLevel(16, "F")) continue;
+        const r = youthLevel(atRaw(raw, 16, "F"), 16, "F"), nx = youthNextLevel(r.level, 16, "F");
+        if (Math.abs(r.level - shown) > 1e-9 || r.category !== youthCategory(shown) ||
+            (nx === null) !== (Math.floor(shown) + 1 > youthMaxLevel(16, "F")) ||
+            (nx !== null && nx.level !== Math.floor(shown) + 1)) agree = false;
+      }
+    }
+    check("just below / above each whole level: shown level, category and next level agree", agree);
+    const top = youthLevel(atRaw(5.96, 10, "F"), 10, "F");
+    check("5.96 at a level-6 top (10F) shows level 6 and no next level",
+      top.level === 6 && youthNextLevel(top.level, 10, "F") === null);
+    check("adult equivalent uses the unrounded level",
+      Math.abs(youthAdultEquivalent(b17.rawLevel, "M") - youthAdultEquivalent(6, "M")) > 0.01);
     check("youth categories: 1 Novice, 3 Intermediate, 6 Good, 9 Elite",
       youthCategory(1) === "Novice" && youthCategory(2.9) === "Novice" && youthCategory(3) === "Intermediate" &&
       youthCategory(5.99) === "Intermediate" && youthCategory(6) === "Good" && youthCategory(9) === "Elite");

@@ -255,7 +255,7 @@
       card.appendChild(el("div", { class: "pw-level", text: "Level " + lvl + " of 10 " + EM_DASH + " " + r.category }));
       card.appendChild(el("p", { class: "pw-sub", text: "for a " + youthWho(youth) + ", on a 10-level scale where age " +
         V.YOUTH_ADULT_ROW + "-38 is the reference band. Whole levels are the published rows; the decimal is interpolated." }));
-      const adultF = V.youthAdultEquivalent(r.level, "F"), adultM = V.youthAdultEquivalent(r.level, "M");
+      const adultF = V.youthAdultEquivalent(r.rawLevel, "F"), adultM = V.youthAdultEquivalent(r.rawLevel, "M");
       card.appendChild(el("p", { class: "pw-foot", text: "Same level as an adult (18-38) woman at VDOT " + V.pyFixed(adultF, 1) +
         " (1,600 m in " + fmt1600(adultF) + ") or man at VDOT " + V.pyFixed(adultM, 1) + " (" + fmt1600(adultM) + ")." }));
       const next = V.youthNextLevel(r.level, youth.age, youth.sex);
