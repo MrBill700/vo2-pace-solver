@@ -231,10 +231,12 @@ faster than I (the book's 6-second rule; no %VO2max is published for R).
 - VDOT is a trademark of The Run SMART Project / V.O2; this project is not
   affiliated with or endorsed by Jack Daniels, V.O2, or Human Kinetics. The
   term is used descriptively to identify the published method.
-- Adult runners only. Not calibrated for children/adolescents: Daniels &
+- The VDOT math is calibrated for adults, not children/adolescents: Daniels &
   Gilbert (1979, Appendix A) state a child's computed value underestimates
   true VO2max and improvement during growth is largely running economy. The
-  method also assumes adequate training at the target distance -- do not
+  widget's youth mode (above) only places a runner aged 6-17 on Daniels'
+  Table 5.5 levels; the paces it shows are the adult bands, not
+  youth-specific training advice. The method also assumes adequate training at the target distance -- do not
   read predictions far across distances from the input race.
 - These are training-guidance numbers, not medical advice.
 
